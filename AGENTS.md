@@ -104,9 +104,10 @@ over that path replace the baked-in plugins without a rebuild.
 2. **Never run `rmlocal` and `rmdev` simultaneously** — this is the general compose rule,
    but TAK is especially sensitive because it binds well-known ports (8089, 8443) that
    conflict immediately.
-3. **TAK is a closed-source Java binary.** You cannot patch or modify the TAK Server
-   application itself. All customization must be done via configuration files and scripts
-   that mount into the container.
+3. **TAK application changes are limited.** The user adopted strict fingerprint
+   authentication as a specific exception to the unmodified-binary baseline. Follow
+   `docs/implementation-plan.md` and obtain matching 5.8.84 source before wiring it into TAK.
+   This exception does not authorize the separate XML persistence patches.
 4. **`takintegration` shares the `taknet` network.** If TAK is misbehaving, check `takrmapi`
    logs as well — the integration layer mediates all user certificate provisioning.
 5. **TAK cert files live in the volume, not the image.** Rebuilding the image does NOT

@@ -3,6 +3,7 @@
 These reports describe tests performed on 2026-10-10.
 The original reproduction used separate Pods as described below.
 The later [shared-Pod follow-up](../docs/t1-single-pod-findings.md) uses the same server image with experimental file isolation and an external plugin launcher.
+Report 007 uses an isolated actual-class component probe from the integration workstream, not the running Pod fixture.
 
 | Item | Tested value |
 | --- | --- |
