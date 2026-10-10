@@ -65,6 +65,27 @@ Resolve UUID encoding/restore, permission freshness, credential inventory and de
 Do not invent Core CRDs or treat fixture inputs as an agreed API.
 Agree the trusted management writer, transport, freshness bound, and capability versions with integration.
 
+### Notify integration when server interfaces are ready
+
+`StrictFingerprintPolicy` and its conformance tests are implemented. No TAK authentication path calls the policy.
+The plugin launcher proves a separate plugin startup workaround. It does not enforce certificate approval.
+The current server rejects `TAK_AUTH_MODE=strict`, and the integrated overlay selects legacy mode.
+
+Notify the user when a pinned candidate enforces strict admission in both messaging and API.
+The candidate must deny startup if the injection is absent or incompatible.
+Its management and capability contract must be stable and versioned.
+Do not wait for full release acceptance before requesting integration adapter work.
+Provide the image digest, unchanged vendor WAR/JAR checksums, extension version, and active-mode check.
+Provide complete-set write and readback schemas, error behavior, the authority freshness bound, access controls, and both applied revisions.
+Show an approved leaf gaining access and an unapproved same-UUID leaf denied before access.
+Ask the user to resume `integration-tak` for its server projector and capability/readback adapters.
+List the remaining live acceptance checks and Core contract dependencies.
+
+Notify the user again when a versioned completed-authentication signal and recovery query are available.
+Supply their connection, UUID, leaf fingerprint, approval revision, time, and replay semantics.
+Ask the user to resume the integration observer.
+Keep integration I1 and production readiness open until the live CoT, HTTPS, session, restart, and revocation checks pass.
+
 ## T2 implementation slices
 
 T2 resumed after the user's explicit `Switched; resume T2` confirmation for `gpt-6.1-sol` / `high`.
