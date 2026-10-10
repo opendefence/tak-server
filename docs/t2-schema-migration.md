@@ -20,6 +20,7 @@ It uses `schema_version`, disables `clean`, and calls `migrate` without the vend
 | Two simultaneous new-launcher Jobs on another empty database | Applied 101 and zero migrations. Both completed. |
 | New launcher after changing the V7 checksum to `1` | Job failed with a Flyway checksum error. The stored checksum remained `1`. |
 | New launcher on a nonempty database without schema history | Job failed. It did not create `schema_version` or baseline the unknown tables. |
+| New launcher after a database statement timeout | The Job failed before the first migration at 1 ms. After reset, a new Job applied all 101 migrations. |
 | Separate runtime role with documented grants | Read a TAK table. `CREATE TABLE` and `UPDATE schema_version` failed with permission denied. |
 
 The test migration account owned its databases and schema objects.
@@ -27,7 +28,7 @@ The test runtime role had data grants and no schema creation right.
 PostgreSQL advisory locking is present in the pinned Flyway implementation.
 Concurrent Job results confirm serialization for these empty databases.
 
-Attempts to force an interruption with 100 ms and 5 ms database statement timeouts did not stop a migration.
-Both test Jobs completed all 101 migrations; those database settings were reset.
+A 100 ms or 5 ms statement timeout did not interrupt a migration.
+Those test database settings were reset.
 A populated older-schema upgrade and retry after a partial or interrupted migration remain untested.
 Do not infer automatic adoption of an unversioned legacy database from the empty-database result.
