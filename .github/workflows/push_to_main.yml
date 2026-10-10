@@ -15,20 +15,21 @@ jobs:
       pull-requests: write
       checks: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           submodules: recursive
           fetch-depth: 0
       - name: Prepare env file for hooks
         run: cp takserver.env.example takserver.env
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.1.0
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       - name: Run prek
-        uses: j178/prek-action@v2
+        uses: j178/prek-action@6dd76cd3f10a318f0fb0b7743a9651fda964a551 # v2
         env:
           SKIP: no-commit-to-branch
 
   build_and_publish:
+    if: vars.TAK_PUBLISH_ENABLED == 'true'
     runs-on: arc-runner-set
     needs: [checks]
     permissions:
@@ -37,12 +38,12 @@ jobs:
     steps:
       - name: Install git-lfs
         run: sudo apt-get update && sudo apt-get install -y git-lfs
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           submodules: recursive
           lfs: true
       - name: Publish image
-        uses: pvarki/config-ci-library/.github/actions/publish-image@main
+        uses: pvarki/config-ci-library/.github/actions/publish-image@1786399bf62c2b691f1e8fb9dcfc7a0be72a2846
         with:
           product: tak
           component: server
@@ -50,9 +51,4 @@ jobs:
           extra-tag: ${{ env.TAK_RELEASE }}
           build-args: |
             TAK_RELEASE=${{ env.TAK_RELEASE }}
-          dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
-          dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          acr-repo: ${{ vars.ACR_REPO }}
-          acr-username: ${{ vars.ACR_USERNAME }}
-          acr-token: ${{ secrets.ACR_TOKEN }}
