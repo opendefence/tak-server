@@ -7,12 +7,15 @@ metadata:
 constants:
   - name: TAK_IMAGE
     value: "###ZARF_PKG_TMPL_TAK_IMAGE###"
-    pattern: "^.+@sha256:[a-f0-9]{64}$"
+    pattern: "^(.+@sha256:[a-f0-9]{64}|localhost/tak-server:local)$"
 variables:
   - name: TAK_SERVER_ADDRESS
     description: DNS name on the supplied HTTPS certificate
     prompt: true
     pattern: "^[A-Za-z0-9][A-Za-z0-9.-]*$"
+  - name: TAK_SERVICE_TYPE
+    default: LoadBalancer
+    pattern: "^(LoadBalancer|ClusterIP)$"
   - name: TAK_IGNITE_POOL_SIZE
     default: "2"
     pattern: "^[0-9]+$"
@@ -47,6 +50,13 @@ components:
           - k8s/zarf/schema
     healthChecks:
       - {apiVersion: batch/v1, kind: Job, name: tak-schema-5-8-84, namespace: tak-server}
+    actions:
+      onDeploy:
+        after:
+          - description: TAK schema migration to complete
+            maxTotalSeconds: 900
+            wait:
+              cluster: {kind: job, name: tak-schema-5-8-84, namespace: tak-server, condition: complete}
   - name: standalone-grants
     required: true
     only: {flavor: standalone}
@@ -59,6 +69,13 @@ components:
           - k8s/zarf/grants
     healthChecks:
       - {apiVersion: batch/v1, kind: Job, name: tak-grants-5-8-84, namespace: tak-server}
+    actions:
+      onDeploy:
+        after:
+          - description: TAK runtime grants to complete
+            maxTotalSeconds: 180
+            wait:
+              cluster: {kind: job, name: tak-grants-5-8-84, namespace: tak-server, condition: complete}
   - name: standalone-server
     required: true
     only: {flavor: standalone}
@@ -83,6 +100,13 @@ components:
           - k8s/zarf/integrated-schema
     healthChecks:
       - {apiVersion: batch/v1, kind: Job, name: tak-schema-5-8-84, namespace: integration-tak}
+    actions:
+      onDeploy:
+        after:
+          - description: TAK schema migration to complete
+            maxTotalSeconds: 900
+            wait:
+              cluster: {kind: job, name: tak-schema-5-8-84, namespace: integration-tak, condition: complete}
   - name: integrated-grants
     required: true
     only: {flavor: integrated}
@@ -95,6 +119,13 @@ components:
           - k8s/zarf/integrated-grants
     healthChecks:
       - {apiVersion: batch/v1, kind: Job, name: tak-grants-5-8-84, namespace: integration-tak}
+    actions:
+      onDeploy:
+        after:
+          - description: TAK runtime grants to complete
+            maxTotalSeconds: 180
+            wait:
+              cluster: {kind: job, name: tak-grants-5-8-84, namespace: integration-tak, condition: complete}
   - name: integrated-server
     required: true
     only: {flavor: integrated}

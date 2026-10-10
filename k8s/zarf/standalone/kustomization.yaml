@@ -16,6 +16,11 @@ configMapGenerator:
       - API_MAX_HEAP=###ZARF_VAR_API_MAX_HEAP###
       - JAVA_TOOL_OPTIONS=###ZARF_VAR_JAVA_TOOL_OPTIONS###
 patches:
+  - target: {kind: Service, name: tak-server}
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: "###ZARF_VAR_TAK_SERVICE_TYPE###"
   - target: {kind: PersistentVolumeClaim, name: tak-data}
     patch: |-
       apiVersion: v1

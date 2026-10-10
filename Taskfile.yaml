@@ -1,0 +1,121 @@
+version: "3"
+
+vars:
+  TAK_CLUSTER_NAME: '{{.TAK_CLUSTER_NAME | default "tak-server-local"}}'
+  TAK_KUBE_CONTEXT: '{{.TAK_KUBE_CONTEXT | default (printf "kind-%s" .TAK_CLUSTER_NAME)}}'
+  TAK_KIND_NETWORK: '{{.TAK_KIND_NETWORK | default "kind"}}'
+  BASE_PACKAGE: '{{.BASE_PACKAGE | default "oci://ghcr.io/opendefence/base:0.4.2-261010"}}'
+  TAK_IMAGE: '{{.TAK_IMAGE | default "localhost/tak-server:local"}}'
+  TAK_SERVER_ADDRESS: '{{.TAK_SERVER_ADDRESS | default "tak.localtest.me"}}'
+
+env:
+  KUBECONFIG: "{{.ROOT_DIR}}/outputs/local/kubeconfig"
+
+includes:
+  cluster:
+    taskfile: https://raw.githubusercontent.com/opendefence/base/b04ff076bc4d3ec6a2ce01074a66f10d0f09b7a6/taskfiles/cluster.yaml
+    vars:
+      CLUSTER_NAME: '{{.TAK_CLUSTER_NAME}}'
+      KUBE_CONTEXT: '{{.TAK_KUBE_CONTEXT}}'
+      KIND_NETWORK: '{{.TAK_KIND_NETWORK}}'
+      KIND_CONFIG_FILE: '{{.ROOT_DIR}}/k8s/local/kind.yaml'
+
+tasks:
+  default:
+    desc: List local development tasks
+    silent: true
+    cmds: [task --list]
+
+  up:
+    desc: Start an isolated Kind cluster with base operators and standalone TAK
+    preconditions:
+      - sh: test "${KUBECONFIG:-}" = {{printf "%s/outputs/local/kubeconfig" .ROOT_DIR | shellQuote}}
+        msg: KUBECONFIG must point at this Taskfile's isolated local kubeconfig
+    cmds:
+      - mkdir -p outputs/local
+      - task: local-cluster
+      - kind export kubeconfig --name {{.TAK_CLUSTER_NAME | shellQuote}} --kubeconfig outputs/local/kubeconfig
+      - task: local-platform
+      - task: credentials
+      - task: database
+      - task: identities
+      - task: image
+      - task: tak
+      - task: smoke
+
+  platform:
+    desc: Install the pinned OpenDefence base operators
+    cmds:
+      - test "$(kubectl config current-context)" = {{.TAK_KUBE_CONTEXT | shellQuote}}
+      - zarf --architecture amd64 package deploy {{.BASE_PACKAGE | shellQuote}} --connected --confirm --set-values issuer.type=ca
+
+  credentials:
+    desc: Generate and retain local runtime and JKS passwords
+    cmds:
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} apply -f k8s/overlays/standalone/namespace.yaml
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} -n tak-server apply -f k8s/local/passwords.yaml
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} -n tak-server wait --for=condition=Ready externalsecret/tak-database-runtime externalsecret/tak-store-passwords --timeout=180s
+
+  database:
+    desc: Start the local CNPG/PostGIS database and managed runtime role
+    cmds:
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} -n tak-server apply -f k8s/local/database.yaml
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} -n tak-server wait --for=condition=Ready cluster/tak-database --timeout=600s
+
+  identities:
+    desc: Issue local CA-signed identities and JKS truststores
+    cmds:
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} -n tak-server apply -f k8s/local/certificates.yaml
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} -n tak-server wait --for=condition=Ready certificate/tak-cot-identity certificate/tak-https-identity certificate/tak-client-trust certificate/tak-federation-bootstrap certificate/tak-probe-identity --timeout=300s
+
+  image:
+    desc: Build the current TAK image and load it into the selected Kind cluster
+    cmds:
+      - |
+        if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1 && ! docker version 2>&1 | grep -qi podman; then
+          docker buildx build --load -t {{.TAK_IMAGE | shellQuote}} .
+        elif command -v podman >/dev/null 2>&1 && podman info >/dev/null 2>&1; then
+          podman build -t {{.TAK_IMAGE | shellQuote}} .
+        else
+          echo 'Start Docker or Podman before building the image' >&2
+          exit 1
+        fi
+      - kind load docker-image --name {{.TAK_CLUSTER_NAME | shellQuote}} {{.TAK_IMAGE | shellQuote}}
+
+  tak:
+    desc: Deploy the standalone Zarf candidate with the local image
+    cmds:
+      - test "$(kubectl config current-context)" = {{.TAK_KUBE_CONTEXT | shellQuote}}
+      - zarf dev deploy . --connected --flavor standalone --components standalone-schema,standalone-grants,standalone-server --create-set {{printf "TAK_IMAGE=%s" .TAK_IMAGE | shellQuote}} --deploy-set-variables {{printf "TAK_SERVER_ADDRESS=%s" .TAK_SERVER_ADDRESS | shellQuote}} --deploy-set-variables TAK_SERVICE_TYPE=ClusterIP
+
+  smoke:
+    desc: Check standalone readiness and authenticated HTTPS
+    cmds:
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} -n tak-server rollout status statefulset/tak-server --timeout=300s
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} -n tak-server exec tak-server-0 -c api -- curl --silent --show-error --fail --cacert /probe/ca.crt --cert /probe/tls.crt --key /probe/tls.key --output /dev/null --write-out '%{http_code}\n' https://tak.localtest.me:8443/Marti/api/user-management/api/list-users
+
+  status:
+    desc: Show the local CNPG, identities, and TAK workloads
+    cmds:
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} get nodes
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} -n tak-server get cluster,externalsecret,certificate,job,statefulset,pod
+
+  local-cluster:
+    internal: true
+    status:
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} get nodes >/dev/null 2>&1
+    cmds:
+      - task: cluster:create
+
+  local-platform:
+    internal: true
+    status:
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} -n cnpg-system get deployment cnpg-controller-manager >/dev/null 2>&1
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} get clusterissuer public-issuer >/dev/null 2>&1
+    cmds:
+      - task: platform
+
+  down:
+    desc: Delete only the selected local Kind cluster
+    cmds:
+      - task: cluster:down

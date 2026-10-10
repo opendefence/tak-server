@@ -1,0 +1,72 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tak-cot-identity
+spec:
+  secretName: tak-cot-identity
+  commonName: tak.localtest.me
+  dnsNames: [tak.localtest.me]
+  privateKey: {algorithm: RSA, size: 2048}
+  usages: [digital signature, key encipherment, server auth]
+  keystores:
+    jks:
+      create: true
+      passwordSecretRef: {name: tak-store-passwords, key: cot-password}
+  issuerRef: {kind: ClusterIssuer, name: public-issuer}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tak-https-identity
+spec:
+  secretName: tak-https-identity
+  commonName: tak.localtest.me
+  dnsNames: [tak.localtest.me]
+  privateKey: {algorithm: RSA, size: 2048}
+  usages: [digital signature, key encipherment, server auth]
+  keystores:
+    jks:
+      create: true
+      passwordSecretRef: {name: tak-store-passwords, key: https-password}
+  issuerRef: {kind: ClusterIssuer, name: public-issuer}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tak-client-trust
+spec:
+  secretName: tak-client-trust
+  commonName: tak-client-trust
+  privateKey: {algorithm: RSA, size: 2048}
+  usages: [digital signature]
+  keystores:
+    jks:
+      create: true
+      passwordSecretRef: {name: tak-store-passwords, key: trust-password}
+  issuerRef: {kind: ClusterIssuer, name: public-issuer}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tak-federation-bootstrap
+spec:
+  secretName: tak-federation-bootstrap
+  commonName: tak-federation-bootstrap
+  privateKey: {algorithm: RSA, size: 2048}
+  usages: [digital signature]
+  keystores:
+    jks:
+      create: true
+      passwordSecretRef: {name: tak-store-passwords, key: trust-password}
+  issuerRef: {kind: ClusterIssuer, name: public-issuer}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tak-probe-identity
+spec:
+  secretName: tak-probe-identity
+  commonName: local-admin
+  privateKey: {algorithm: RSA, size: 2048}
+  usages: [digital signature, client auth]
+  issuerRef: {kind: ClusterIssuer, name: public-issuer}

@@ -11,3 +11,4 @@ takgov_assets/*/
 .venv/
 __pycache__/
 .ruff_cache/
+.task/

@@ -5,6 +5,22 @@ The image includes the external plugin launcher. The base does not enable plugin
 The candidate supports explicit legacy authentication. Strict authentication remains under implementation.
 Selecting `TAK_AUTH_MODE=strict` stops startup until that injection exists. Do not use this candidate as a strict-authentication release.
 
+## Local standalone test cluster
+
+With Docker or Podman running and [mise](https://mise.jdx.dev/) installed, bring up an isolated Kind cluster using the pinned [OpenDefence base cluster task](https://github.com/opendefence/base/blob/b04ff076bc4d3ec6a2ce01074a66f10d0f09b7a6/taskfiles/cluster.yaml):
+
+```sh
+mise install
+mise exec -- task --yes up
+mise exec -- task --yes status
+mise exec -- task --yes smoke
+```
+
+`up` creates `tak-server-local` and writes its kubeconfig to `outputs/local/kubeconfig`.
+It installs the base operators and a local CA, generates retained runtime/JKS password Secrets with External Secrets Operator, starts CNPG/PostGIS, issues JKS identities with cert-manager, builds and loads the current image, then deploys the standalone Zarf components. The final smoke check requires a ready StatefulSet and HTTP 200 from an authenticated `/Marti` read.
+The local Zarf deployment uses a ClusterIP Service because Kind has no load balancer; the normal standalone package defaults to LoadBalancer. Use `kubectl --kubeconfig outputs/local/kubeconfig -n tak-server port-forward svc/tak-server 8443:8443` for local access. The test CA and admin probe identity are for this disposable cluster only.
+`mise exec -- task --yes down` deletes that cluster, including its database and identities. It does not target other Kind clusters.
+
 ## Required inputs
 
 Supply a same-namespace CloudNativePG Cluster named `tak-database`, bootstrapped
@@ -75,6 +91,7 @@ with the tested base defaults. Internal mount paths, the Ignite discovery Servic
 and legacy authentication mode are fixed by this candidate. Compose-only CA
 generation, admin certificate, and mission-package environment variables are not
 used by the native deployment.
+`TAK_SERVICE_TYPE` defaults to `LoadBalancer`; the local Kind task sets `ClusterIP`.
 
 Before deployment, supply the five identity/trust Secrets listed above and the
 matching store-password Secret in the target namespace (`tak-server` or
