@@ -7,12 +7,15 @@ Selecting `TAK_AUTH_MODE=strict` stops startup until that injection exists. Do n
 
 ## Required inputs
 
-Supply a migrated PostgreSQL database and these Secrets in the installation namespace.
-The schema migration Job is not implemented yet. Use separate migration credentials when preparing the database.
+Supply a PostgreSQL database with PostGIS and pgcrypto installed.
+Apply the separate schema Job before the server base.
+Give the migration account the rights to create and alter TAK tables.
+Keep the runtime account separate.
 The database runtime account must already have the required TAK permissions.
 
 | Secret | Required keys | Purpose |
 | --- | --- | --- |
+| `tak-database-migration` | `username`, `password` | Schema Job database access. |
 | `tak-database-runtime` | `username`, `password` | Application database access. |
 | `tak-store-passwords` | `cot-password`, `https-password`, `trust-password` | Passwords matching the supplied stores. |
 | `tak-cot-identity` | `keystore.jks` | RSA CoT/JWT private-key entry. |
@@ -44,6 +47,28 @@ Create a local overlay that consumes `k8s/base` or the standalone overlay.
 Set its namespace, image digest, storage size/class, advertised DNS name, and database address/name.
 Merge `tak-settings` with `configMapGenerator` and `behavior: merge`.
 Keep passwords and rendered XML out of ConfigMaps.
+
+Create a separate local overlay for `k8s/schema`.
+Set the same namespace and image as the server overlay.
+Merge `tak-schema-settings` with the database address and name.
+Apply and wait for the versioned Job before starting the server:
+
+```sh
+kubectl apply -k path/to/schema-overlay
+kubectl -n tak-server wait --for=condition=complete job/tak-schema-5-8-84 --timeout=900s
+```
+
+The Job runs the pinned SchemaManager from the image.
+Flyway uses a PostgreSQL advisory lock during migration.
+The versioned Job stays complete after success; a new release needs a new Job name.
+On an empty database, SchemaManager installs the schema without `takdb_base.sql`.
+The old Compose initializer still uses that file, so keep it until Compose retirement.
+Back up the database before any upgrade.
+Inspect the Job logs and schema history before starting the server.
+The vendor `upgrade` command can repair Flyway metadata after a migration error.
+Its `validate` command returned success with a deliberately changed checksum in a disposable test database.
+Do not treat this Job as an unattended production upgrade until that behavior has a fail-closed guard.
+Upgrade from an older populated schema and retry after interruption still need tests.
 
 The standalone overlay creates namespace `tak-server` and a TCP LoadBalancer Service.
 It requires the database and Secrets above. It has no Core, RMAPI, integration operator, or sibling-checkout dependency.

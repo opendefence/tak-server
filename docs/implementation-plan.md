@@ -65,17 +65,18 @@ Agree the trusted management writer, transport, freshness bound, and capability 
 
 ## T2 implementation slices
 
-T2 began after the user's explicit `Switched; resume T2` confirmation for `gpt-6.1-sol` / `high`.
+T2 resumed after the user's explicit `Switched; resume T2` confirmation for `gpt-6.1-sol` / `high`.
 The user confirmed `Switched; resume T1` on 2026-10-10 for the CoT investigation.
 The [T1 follow-up](t1-cot-cache-findings.md) isolates the native base's reduced Ignite cache maximum.
-Runtime model metadata is unavailable. T2 is held at its return model gate before the source correction.
+Runtime model metadata is unavailable; user confirmation is the gate evidence.
 See [native layout evidence](t2-native-layout.md).
 Implement each coherent slice in small reviewed commits. Test injection seams against the pinned binaries before wiring strict authentication.
 
 ### 1. Package the proven Pod and storage layout
 
 - [ ] Create one versioned Kustomize base and standalone/integrated overlays using ordinary OCI builds, Java 17, and the actual Python 3.12 runtime.
-- [ ] Correct the 64 MiB Ignite cache maximum to the tested 256 MiB value. Recheck CoT from the rendered native base, then remove the experimental live override. Verify resource budgets separately under the intended load.
+- [x] Correct the 64 MiB Ignite cache maximum to the tested 256 MiB value. Recheck CoT from the rendered native base, then remove the experimental live override.
+- [ ] Verify cache and container resource budgets under the intended load.
 - [x] Package the experimental adapter in the image. Use one configuration owner, non-overlapping replacement, and the lifetime lock; a singleton StatefulSet is suitable.
 - [x] Preserve `/opt/tak/data/CoreConfig_config.xml` and config-container compatibility links. Retain `coreconfig.py` ownership merge, XSD validation, restrictive modes, backup, and atomic startup publication.
 - [x] Seed private follower files from the validated authority. Keep ConfigMaps/Secrets as inputs and administrator-owned peers, groups, policy, listeners, and federation trust on persistent storage.
@@ -101,6 +102,12 @@ T1 recovery times are observations, not an SLA. Optional roles remain unsupporte
 - [ ] Use cert-manager/external PKI without mounting CA signing keys in ordinary Pods. Import existing identities first and preserve fingerprints and PVCs.
 - [ ] Replace `firstrun.done` with a versioned SchemaManager Job, database-side exclusion, and separate migration credentials. Verify whether `takdb_base.sql` is required before deleting it.
 - [ ] Retire the legacy certificate generators and their consumers under the script replacement plan below. Preserve existing identities and administrator trust during adoption.
+
+The separate [schema Job](../k8s/schema/job.yaml) is a tested candidate for an empty database.
+Fresh, repeat, and concurrent runs passed with separate credentials in disposable databases.
+Flyway provides database-side locking. The legacy SQL dump is unnecessary for an empty database.
+The vendor command repairs Flyway metadata after an upgrade error; its `validate` command did not reject a changed checksum.
+Add a fail-closed guard before unattended upgrades. Test a populated upgrade and interrupted retry before closing this item.
 
 ### 4. Wire strict authentication and management
 
