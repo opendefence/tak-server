@@ -4,6 +4,8 @@ T1 is incomplete. A TAK application change needs approval before work continues.
 The user confirmed `gpt-6-astra` / `xhigh` with `Switched; resume T1`.
 This is user confirmation, not runtime metadata verification.
 All observations below are from 2026-10-10.
+Individual TAK defects now have [bug reports with handoffs and sanitized evidence](../bugreports/README.md).
+The index distinguishes reproduced failures from findings that still need fault-injection tests.
 
 ## Tested candidate
 

@@ -1,0 +1,45 @@
+# 001: Administrator edits are lost with separate role IPs
+
+Status: open, reproduced. Impact: accepted administrator configuration is lost on restart.
+Affected candidate: TAK `5.8-RELEASE-84`; see [environment](../ENVIRONMENT.md).
+Evidence: [selected responses and file observations](evidence.json).
+
+## Reproduction
+
+1. Start the three roles using the shared environment. Confirm the test peer is absent and the recency value is `43200`.
+2. As the certificate-authenticated administrator, send `POST /Marti/api/outgoingconnections` with this body:
+
+   ```json
+   {"displayName":"t1_persistence_peer","address":"127.0.0.1","port":19001,"enabled":false,"reconnectInterval":60,"protocolVersion":2}
+   ```
+
+3. Read `GET /Marti/api/federationconfig`. Preserve its fields and change only `data.missionFederationDisruptionToleranceRecencySeconds` to `43201`.
+4. Send that modified `data` object to `PUT /Marti/api/federationconfig`. Keep the full response and request private: they include truststore credentials.
+5. Read both resources again. Compare the canonical XML checksum and the two selected values on the PVC.
+6. Replace messaging, then restart config and API as described in [002](../002-ignite-reconnect-stalls/HANDOFF.md). Read both resources again.
+
+Expected: successful saves reach the canonical XML and survive restart.
+Actual: both writes returned HTTP 200 and appeared in API reads, but neither reached the XML.
+Its SHA-256 stayed unchanged. After restarts, the peer was absent and the recency value returned to `43200`.
+The test exercised the API used by the admin UI, not browser interaction.
+
+## Cause and scope
+
+Inspection of `IgniteHolder.areTakserverIgnitesLocal()` shows that it compares messaging and API node address sets.
+`DistributedConfiguration.saveChanges()` permits the non-cluster config service to save only when those address sets satisfy that test.
+Separate Pod IPs make the test false once both roles are present.
+`CoreConfigFacade` delegates administrator mutations to this service, leaving edits in memory/cache without publishing the file.
+The compatibility symlink was correct, and the canonical file existed with mode `0600`.
+
+## Handoff
+
+Obtain matching source or a fixed vendor build, then reproduce before editing.
+The proposed fix makes the configuration service the persistent writer independently of IP equality.
+Keep save failures visible to the caller. Cover startup writers from [003](../003-multiple-xml-writers/HANDOFF.md) and publication from [004](../004-unsafe-xml-publication/HANDOFF.md).
+Do not globally change `areTakserverIgnitesLocal()` or enable TAK cluster mode to bypass this condition.
+The source patch decision remains open.
+
+Acceptance requires both edits to reach the PVC before successful completion and survive config/API restart, full rollout, and a supported upgrade.
+Managed-input reconciliation must preserve these administrator-owned fields.
+Regression checks must also cover the existing same-address mode and offline tools.
+No fix, supported-upgrade result, or complete admin persistence acceptance is claimed.
