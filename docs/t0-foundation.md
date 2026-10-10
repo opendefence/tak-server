@@ -64,7 +64,8 @@ These checks do not establish JNI compatibility or live server acceptance.
 - RASENMAEHER bootstrap, user wrappers, package generation, Compose, Azure, and DevSpace remain inherited code. Remove them in later verified slices.
 - Mission, content, audit, and other write paths still need a binary-level inventory. The image is not declared read-only.
 
-The inherited `AGENTS.md` describes older versions and volume deletion.
+At T0, the inherited `AGENTS.md` described older versions and volume deletion.
+The current file describes the native Kubernetes candidate.
 The implementation handoff takes precedence.
 Do not delete persistent data for certificate renewal.
 

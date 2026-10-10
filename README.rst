@@ -2,6 +2,12 @@
 Run TAK Java server in container
 ================================
 
+The current OpenDefence Kubernetes setup is documented in ``k8s/README.md``.
+For a disposable standalone test cluster, run ``mise install`` followed by
+``mise exec -- task --yes up``. Use ``mise exec -- task --yes smoke`` to check
+authenticated HTTPS. The Compose notes below describe the inherited deployment
+while its remaining workflows are retired.
+
 The runtime uses ``eclipse-temurin:17-jre-noble`` with Python/lxml and the
 certificate, database and shell tools required by initialization. The distribution
 is unpacked in a separate build stage so its ZIP archive is not retained in the
@@ -231,15 +237,17 @@ Configuration regression tests
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Run these checks using the TAK image, which provides Python, lxml, gomplate,
-OpenSSL, keytool and the matching configuration schema::
+OpenSSL, keytool and the matching configuration schema. After
+``mise exec -- task --yes up`` builds the local image, substitute ``podman`` for
+``docker`` on a Podman-only host::
 
     docker run --rm -v "$PWD:/workspace:ro" --entrypoint /usr/bin/python3 \
-      ghcr.io/pvarki/tak-server:5.8.69-260912 \
+      localhost/tak-server:local \
       -m unittest discover -s /workspace/tests -v
     docker run --rm -v "$PWD:/workspace:ro" --entrypoint /bin/bash \
-      ghcr.io/pvarki/tak-server:5.8.69-260912 /workspace/tests/test-fed-truststore.sh
+      localhost/tak-server:local /workspace/tests/test-fed-truststore.sh
     docker run --rm -v "$PWD:/workspace:ro" --entrypoint /bin/bash \
-      ghcr.io/pvarki/tak-server:5.8.69-260912 /workspace/tests/test-api-keystore.sh
+      localhost/tak-server:local /workspace/tests/test-api-keystore.sh
 
 These tests do not start the full integration composition. Standalone tests use
 real certificate tools but mock database initialization; the API keystore test
@@ -249,7 +257,7 @@ To also exercise the RASENMAEHER initialization defaults with synthetic internal
 and external certificate chains, run in a fresh disposable container::
 
     docker run --rm -v "$PWD:/workspace:ro" -v "$PWD/scripts:/opt/scripts:ro" \
-      --entrypoint /usr/bin/python3 ghcr.io/pvarki/tak-server:5.8.69-260912 \
+      --entrypoint /usr/bin/python3 localhost/tak-server:local \
       /workspace/tests/check_rm_defaults.py
 
 This check clears HTTPS overrides, supplies an existing product identity and
