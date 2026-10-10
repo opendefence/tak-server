@@ -21,8 +21,6 @@ configMapGenerator:
       - TAK_COT_KEYSTORE_FILENAME=/identities/cot/keystore.jks
       - TAK_HTTPS_KEYSTORE_FILENAME=/identities/https/keystore.jks
       - TAK_CLIENT_TRUSTSTORE_FILENAME=/identities/client-trust/truststore.jks
-      - POSTGRES_ADDRESS=tak-database-rw
-      - POSTGRES_DB=cot
       - CONFIG_MAX_HEAP=128
       - MESSAGING_MAX_HEAP=512
       - API_MAX_HEAP=512

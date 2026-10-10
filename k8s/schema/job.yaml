@@ -24,15 +24,19 @@ spec:
             - -cp
             - /opt/tak/db-utils/SchemaManager.jar:/opt/tak/lib/pvarki-launcher.jar
             - org.opendefence.tak.SchemaUpgrade
-          envFrom:
-            - configMapRef: {name: tak-schema-settings}
           env:
+            - name: POSTGRES_ADDRESS
+              valueFrom:
+                secretKeyRef: {name: tak-database-app, key: host}
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef: {name: tak-database-app, key: dbname}
             - name: POSTGRES_USER
               valueFrom:
-                secretKeyRef: {name: tak-database-migration, key: username}
+                secretKeyRef: {name: tak-database-app, key: username}
             - name: POSTGRES_PASSWORD
               valueFrom:
-                secretKeyRef: {name: tak-database-migration, key: password}
+                secretKeyRef: {name: tak-database-app, key: password}
           resources:
             requests: {cpu: 100m, memory: 256Mi}
             limits: {memory: 1Gi}

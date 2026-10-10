@@ -48,6 +48,12 @@ spec:
             - name: TAK_IGNITE_BIND_ADDRESS
               valueFrom:
                 fieldRef: {fieldPath: status.podIP}
+            - name: POSTGRES_ADDRESS
+              valueFrom:
+                secretKeyRef: {name: tak-database-app, key: host}
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef: {name: tak-database-app, key: dbname}
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef: {name: tak-database-runtime, key: username}

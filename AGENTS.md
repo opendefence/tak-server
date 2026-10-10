@@ -98,6 +98,12 @@ docker compose -p tak exec takserver_api /bin/bash -c \
 over that path replace the baked-in plugins without a rebuild.
 
 ## Common Agent Pitfalls
+0. **Keep Zarf packaging in sync with native overlays.** `zarf.yaml` packages the
+   standalone and integrated flavors. CNPG owns PostgreSQL connection inputs and
+   migration credentials; installation-generated Secrets own JKS passwords. When a
+   Kubernetes overlay changes an input, Secret, image, workload, or namespace,
+   update `zarf.yaml` and `k8s/zarf/` in the same change and run Zarf
+   lint/manifest inspection.
 1. **Preserve native Kubernetes identity and data state.** See `k8s/README.md` for the
    candidate base. Rotate matching identity/password Secrets together and replace the
    server Pod. Never delete its PVC to renew certificates. The older Compose setup

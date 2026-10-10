@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tak-grants-5-8-84
+  labels:
+    app.kubernetes.io/name: tak-server
+    app.kubernetes.io/component: grants
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 180
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: tak-server
+        app.kubernetes.io/component: grants
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      containers:
+        - name: grants
+          image: tak-server:5.8.84
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              psql -v ON_ERROR_STOP=1 -v runtime_user="$RUNTIME_USER" <<'SQL'
+              BEGIN;
+              SELECT format('GRANT CONNECT ON DATABASE %I TO %I', current_database(), :'runtime_user') \gexec
+              SELECT format('GRANT USAGE ON SCHEMA public TO %I', :'runtime_user') \gexec
+              SELECT format('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO %I', :'runtime_user') \gexec
+              SELECT format('REVOKE INSERT, UPDATE, DELETE ON TABLE public.schema_version FROM %I', :'runtime_user') \gexec
+              SELECT format('GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO %I', :'runtime_user') \gexec
+              SELECT format('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I', :'runtime_user') \gexec
+              SELECT format('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO %I', :'runtime_user') \gexec
+              COMMIT;
+              SQL
+          env:
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef: {name: tak-database-app, key: host}
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef: {name: tak-database-app, key: dbname}
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef: {name: tak-database-app, key: username}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef: {name: tak-database-app, key: password}
+            - name: RUNTIME_USER
+              valueFrom:
+                secretKeyRef: {name: tak-database-runtime, key: username}
+          resources:
+            requests: {cpu: 100m, memory: 64Mi}
+            limits: {memory: 256Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            seccompProfile: {type: RuntimeDefault}

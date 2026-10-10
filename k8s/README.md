@@ -7,17 +7,25 @@ Selecting `TAK_AUTH_MODE=strict` stops startup until that injection exists. Do n
 
 ## Required inputs
 
-Supply a PostgreSQL database with PostGIS and pgcrypto installed.
-Apply the separate schema Job before the server base.
-Give the migration account the rights to create and alter TAK tables.
-Keep the runtime account separate.
-Grant the runtime account data access after the schema Job completes.
+Supply a same-namespace CloudNativePG Cluster named `tak-database`, bootstrapped
+with the TAK database and owner. Its generated `tak-database-app` Secret supplies
+the host, database name, and migration account to the schema Job; the server uses
+its host and database name.
+Install PostGIS and pgcrypto in that database.
+Apply the separate schema and grants Jobs before the server base.
+Give the CNPG application owner rights to create and alter TAK tables.
+Keep the runtime account separate and manage it through CNPG role management.
+CNPG generates the [application Secret](https://cloudnative-pg.io/docs/1.30/applications/),
+but a separate runtime role needs a `kubernetes.io/basic-auth` password Secret
+from the installation's Secret generator; [CNPG consumes that Secret and
+reconciles the role](https://cloudnative-pg.io/docs/1.30/declarative_role_management/).
+The grants Job gives the runtime account data access after the schema Job completes.
 
 | Secret | Required keys | Purpose |
 | --- | --- | --- |
-| `tak-database-migration` | `username`, `password` | Schema Job database access. |
-| `tak-database-runtime` | `username`, `password` | Application database access. |
-| `tak-store-passwords` | `cot-password`, `https-password`, `trust-password` | Passwords matching the supplied stores. |
+| `tak-database-app` | `host`, `dbname`, `username`, `password` | CNPG-generated schema connection and server endpoint. |
+| `tak-database-runtime` | `username`, `password` | Generated basic-auth Secret consumed by the CNPG-managed runtime role. |
+| `tak-store-passwords` | `cot-password`, `https-password`, `trust-password` | Installation-generated passwords matching the supplied stores. |
 | `tak-cot-identity` | `keystore.jks` | RSA CoT/JWT private-key entry. |
 | `tak-https-identity` | `keystore.jks`, `ca.crt` | Separate HTTPS identity and public outbound CA bundle. |
 | `tak-client-trust` | `truststore.jks` | CoT client trust. |
@@ -36,6 +44,58 @@ The client and federation truststores use `trust-password`. Preserve that passwo
 An unrelated client trust root must not replace administrator-managed federation trust.
 Keep CoT and HTTPS identities separate. Do not widen client trust with public Java roots.
 
+## Zarf packages
+
+The repository root [`zarf.yaml`](../zarf.yaml) packages both native overlays and
+the schema/grants Jobs as `standalone` and `integrated` flavors. Use Zarf's lowercase filename.
+Build with a published, pinned TAK image digest; each package includes that image
+for offline deployment:
+
+```sh
+zarf dev lint . --flavor standalone --set TAK_IMAGE=ghcr.io/opendefence/tak-server@sha256:<published-digest>
+zarf package create . --flavor standalone --set TAK_IMAGE=ghcr.io/opendefence/tak-server@sha256:<published-digest>
+zarf package deploy zarf-package-tak-server-*.tar.zst
+```
+
+For the integrated flavor, use `--flavor integrated` at creation. Apply the sibling
+`integration-tak` deployment first; it owns that namespace. The integrated Zarf
+package installs TAK resources there and does not install the sibling operator.
+For standalone Zarf deployment, create namespace `tak-server` and install its
+CNPG Cluster and identity/credential Secrets before deploying the package.
+
+Zarf prompts for `TAK_SERVER_ADDRESS`. PostgreSQL host, database, and migration
+credentials come from the CNPG-generated `tak-database-app` Secret. The separate
+runtime role must be managed by CNPG, using the installation-generated
+`tak-database-runtime` password Secret. Zarf does not prompt for or copy
+database credentials. The identity provisioning workflow must generate
+`tak-store-passwords` alongside the JKS identities so the passwords match;
+Zarf does not prompt for or regenerate them.
+Pool/cache sizes, JVM heap limits, and `JAVA_TOOL_OPTIONS` are also Zarf parameters
+with the tested base defaults. Internal mount paths, the Ignite discovery Service,
+and legacy authentication mode are fixed by this candidate. Compose-only CA
+generation, admin certificate, and mission-package environment variables are not
+used by the native deployment.
+
+Before deployment, supply the five identity/trust Secrets listed above and the
+matching store-password Secret in the target namespace (`tak-server` or
+`integration-tak`). The same namespace must contain the CNPG Cluster, its
+generated application Secret, and the separate runtime role/Secret. Generate
+each Secret once and preserve it across Zarf redeployments; changing a store
+password without reissuing its JKS prevents startup. Check the schema Job result
+and its migration history before treating the server as ready.
+Zarf waits for the schema and grants Jobs, then deploys the server. It does not generate a
+CA, sign certificates, provision CNPG, or alter existing PVCs. The package marks
+its PVC for retention when Zarf removes the generated Helm releases. A database
+switch or TAK release
+upgrade needs a reviewed new schema Job name; a completed Job is not rerun.
+After changing ConfigMap or password inputs on an installed system, coordinate
+a whole-Pod replacement so every TAK role reads the same generation.
+
+Update `zarf.yaml` and `k8s/zarf/` whenever a native overlay adds or changes a
+configurable input, Secret key, image, workload, or namespace. Render and inspect
+the resulting package before release; Zarf's Kustomize build happens at package
+creation, while values are substituted at deployment.
+
 ## Install
 
 Build the image with the repository Dockerfile. Override `JAVA_RUNTIME_IMAGE` and `JAVA_BUILD_IMAGE` with pinned images.
@@ -44,28 +104,29 @@ The Kind overlay selects the local `localhost/tak-server:t2-layout-5.8.84` test 
 Load that image into the intended Kind cluster before applying the overlay.
 
 Create a local overlay that consumes `k8s/base`, `k8s/overlays/standalone`, or `k8s/overlays/integrated`.
-Set its namespace, image digest, storage size/class, advertised DNS name, and database address/name.
+Set its namespace, image digest, storage size/class, and advertised DNS name.
 Merge `tak-settings` with `configMapGenerator` and `behavior: merge`.
 Keep passwords and rendered XML out of ConfigMaps.
 
 The integrated overlay targets the `integration-tak` namespace created by the sibling
 `integration-tak/k8s/integration` deployment. It does not create or own that namespace.
-Its TAK resources, database/identity Secrets, schema Job, and PVC must all be placed
+Its TAK resources, CNPG Cluster/database/identity Secrets, schema Job, and PVC must all be placed
 there by the installer. The overlay allows the sibling's `app: integration-tak-operator`
 Pod to reach Ignite; it does not deploy the operator or grant it TAK Secret access.
 The sibling API and operator manifests are managed in their own repository.
 The integrated overlay is still a legacy-authentication candidate until strict
 admission and the management contract pass their acceptance checks.
 
-Create a separate local overlay for `k8s/schema`.
+Create separate local overlays for `k8s/schema` and `k8s/grants`.
 Set the same namespace and image as the server overlay (`integration-tak` for the integrated deployment).
-Merge `tak-schema-settings` with the database address and name.
-Apply and wait for the versioned Job before starting the server:
+Apply and wait for both versioned Jobs before starting the server:
 
 ```sh
 TAK_NAMESPACE=tak-server # use integration-tak for the integrated overlay
 kubectl apply -k path/to/schema-overlay
 kubectl -n "$TAK_NAMESPACE" wait --for=condition=complete job/tak-schema-5-8-84 --timeout=900s
+kubectl apply -k path/to/grants-overlay
+kubectl -n "$TAK_NAMESPACE" wait --for=condition=complete job/tak-grants-5-8-84 --timeout=180s
 ```
 
 The Job uses Flyway and the migrations bundled in the pinned `SchemaManager.jar`.
@@ -83,27 +144,16 @@ The Job rejects it until an operator reviews and reconciles those exact history 
 The disposable dump upgrade passed after that step. A new Job also resumed after the first Job stopped at a blocked V98 migration.
 A production data upgrade and other interruption modes still need tests.
 
-Run these grants as a database administrator after the Job completes.
-Replace `cot`, `tak_migration`, and `tak_runtime` with the actual database and role names.
-Use the migration account as the owner of the new TAK tables.
-
-```sql
-GRANT CONNECT ON DATABASE cot TO tak_runtime;
-GRANT USAGE ON SCHEMA public TO tak_runtime;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO tak_runtime;
-REVOKE INSERT, UPDATE, DELETE ON TABLE public.schema_version FROM tak_runtime;
-GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO tak_runtime;
-ALTER DEFAULT PRIVILEGES FOR ROLE tak_migration IN SCHEMA public
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO tak_runtime;
-ALTER DEFAULT PRIVILEGES FOR ROLE tak_migration IN SCHEMA public
-  GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO tak_runtime;
-```
-
-The runtime role must not own the schema, have `CREATE` on it, or change `schema_version`.
+The grants Job connects as the CNPG application owner. It grants existing-table
+and sequence access to the runtime role, sets default privileges for later
+migrations, and removes runtime write access to `schema_version`. It uses the
+runtime username from its Secret and quotes it as a PostgreSQL identifier.
+The runtime role must not own the schema, have `CREATE` on it, or inherit
+`schema_version` write access through another role.
 The disposable test runtime role could read a TAK table and could not create a table.
 
 The standalone overlay creates namespace `tak-server` and a TCP LoadBalancer Service.
-It requires the database and Secrets above. It has no Core, RMAPI, integration operator, or sibling-checkout dependency.
+It requires the CNPG Cluster and Secrets above. It has no Core, RMAPI, integration operator, or sibling-checkout dependency.
 The Kind overlay uses ClusterIP services; use port forwarding for local traffic tests.
 
 ```sh

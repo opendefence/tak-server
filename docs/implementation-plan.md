@@ -78,6 +78,8 @@ Implement each coherent slice in small reviewed commits. Test injection seams ag
 
 - [ ] Create one versioned Kustomize base and standalone/integrated overlays using ordinary OCI builds, Java 17, and the actual Python 3.12 runtime.
 - [x] Add a namespace-neutral server base and an integrated overlay targeting the sibling operator's namespace. Its NetworkPolicy admits the operator Pod to Ignite. Strict-mode acceptance and a pinned production image remain open.
+- [x] Add Zarf standalone/integrated flavors with deploy-time parameters for public native environment inputs and ordered schema/grants/server components. Read PostgreSQL connection/migration values from CNPG's generated application Secret; consume a separate CNPG-managed runtime role Secret and installation-generated store-password Secret. Keep the package aligned with overlay changes. Building a package from a published digest and live deployment remain open.
+- [ ] Wire installation-owned one-time generation and retention for the CNPG runtime role password Secret and JKS store-password Secret, followed by issuer-managed JKS issuance. Keep values out of Zarf parameters and preserve them on redeploy/renewal; validate CNPG role and privilege grants before declaring either flavor self-contained.
 - [x] Correct the 64 MiB Ignite cache maximum to the tested 256 MiB value. Recheck CoT from the rendered native base, then remove the experimental live override.
 - [ ] Verify cache and container resource budgets under the intended load.
 - [x] Package the experimental adapter in the image. Use one configuration owner, non-overlapping replacement, and the lifetime lock; a singleton StatefulSet is suitable.
