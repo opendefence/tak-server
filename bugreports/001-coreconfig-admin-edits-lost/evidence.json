@@ -46,10 +46,22 @@
     "PUT federationconfig": 200,
     "source": "T1 terminal observations and committed findings; response files contain bodies only"
   },
+  "jni_assessment": {
+    "limit": "No live JNI subscription or forced save was attempted.",
+    "observation": "The remote interface exposes guarded saves, not a force-save operation. LocalConfiguration methods run in the calling JVM. A separate snapshot writer or server-side persistence hook would be new behavior.",
+    "watch_paths": [
+      "config-cache/coreConfig",
+      "CONFIG_TOPIC_KEY"
+    ]
+  },
   "observed_on": "2026-10-10",
   "original_findings_commit": "8ec0351",
   "redaction": "Only test-peer fields, the selected timing field, a success message, and filesystem observations are included. Truststore credentials and complete API exports are omitted.",
   "source_artifacts": [
+    "outputs/t1/coreconfig-remote-interface.txt",
+    "outputs/t1/decompiled/com/bbn/marti/remote/config/CoreConfigFacade.java",
+    "outputs/t1/decompiled/com/bbn/marti/remote/config/DistributedConfiguration.java",
+    "outputs/t1/decompiled/com/bbn/marti/remote/config/LocalConfiguration.java",
     "outputs/t1/distributed-save-bytecode.txt",
     "outputs/t1/ignite-locality-bytecode.txt",
     "outputs/t1/edited-outgoingconnections.json",

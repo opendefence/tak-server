@@ -23,6 +23,19 @@ An API-local file-auth copy can fail without losing the messaging owner's persis
 The reported durability risk concerns failure on the actual persistent file-auth owner.
 Inject the failure there before claiming an acknowledged user update is lost.
 
+## Live storage verification
+
+Rechecked the owned T1 environment on 2026-10-10 without changing application state.
+The live CoreConfig selects `/opt/tak/data/UserAuthenticationFile.xml`.
+The `tak-data` PVC is Bound and mounted at `/opt/tak/data` in API, messaging, and config Pods.
+API and messaging report the same regular file, device `64772`, inode `176722332`, and mode `0644`.
+The `.backup` file is also on that mount. No nested mount or symlink redirects the live file elsewhere.
+Selected observations and source hashes are retained in [evidence](evidence.json).
+
+This is persistent across Pod replacement, as also observed in the earlier identity checks.
+The test PV uses node-local storage with reclaim policy `Delete`; it is not a backup or proof of survival after node/cluster removal.
+The open question in this report is error propagation when a persistent write fails, not whether the current file is on a PVC.
+
 ## Reproduction still needed
 
 1. Start the exact runtime with disposable file-auth state and normal logging.

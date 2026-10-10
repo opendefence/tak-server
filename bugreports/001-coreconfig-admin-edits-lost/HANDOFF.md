@@ -39,11 +39,36 @@ However, direct `javap` inspection confirms that the save guard bypasses `JAXBUt
 This mechanism does not depend on shared files or concurrent writes. Private follower files do not change the guard.
 The locality helper also returns true when the API address set is empty.
 Thus startup topology can change save eligibility before and after API joins, independently of filesystem races.
+The web admin and REST API require the API role. The pre-API case explains startup saves, not administrator edits made before API is available.
 
 Repeat the edit with private follower CoreConfigs and trace the persistent owner's writes before changing TAK.
 Keep the roles running with stable, distinct addresses during the edit.
 Capture the save branch and file activity to distinguish no save from a save followed by an overwrite.
 The guard is verified by bytecode; an additional race in the original run remains unexcluded.
+
+## JNI observer assessment
+
+An Ignite client reached through JNI can, in principle, observe `config-cache` updates for key `coreConfig` or listen for `CONFIG_TOPIC_KEY` notifications.
+The selected TAK classes already use these mechanisms. The topic carries an invalidation signal, so its consumer must fetch the current configuration.
+Apache Ignite documents [continuous queries](https://ignite.apache.org/docs/ignite2/latest/key-value-api/continuous-queries) for cache changes.
+This is an interface-level feasibility assessment, not a live JNI validation.
+
+The inspected `CoreConfig` remote interface has `saveChanges()` and `saveChangesAndUpdateCache()`, but no force-save bypass.
+Both use the guarded distributed save path. Repeating either call from JNI does not remove the address condition.
+Calling `LocalConfiguration.saveChanges()` through JNI invokes the client JVM's singleton and filesystem, not the server JVM's singleton.
+It can only save the desired snapshot locally if the client explicitly fetches and installs that snapshot and has access to the destination.
+
+Two bypass designs are possible, but neither is an existing remote force-save operation:
+
+- Run a persistence hook inside the config JVM. It can access the owner's current configuration and bypass the guard. It requires server-side code and must still address publication and error handling.
+- Let an external observer fetch and atomically persist snapshots. It becomes a persistent writer and needs exclusive ownership, restart coordination, reconnect reconciliation, and protection against older snapshots overwriting newer state.
+
+An asynchronous observer cannot make the original admin HTTP response certify durable storage.
+A crash between API success and observer publication can still lose the edit.
+A hook triggered after a notification has the same acknowledgement gap unless the request waits for persistence.
+Calling `CoreConfigFacade.saveChanges()` from its own topic listener would also emit another notification; avoid a notification loop.
+A watcher can be a recovery aid, but accepting it as the primary saver changes the persistence contract.
+No watcher, hook, or forced save was installed or executed.
 
 ## Handoff
 
