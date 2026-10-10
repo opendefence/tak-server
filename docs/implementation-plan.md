@@ -104,10 +104,12 @@ T1 recovery times are observations, not an SLA. Optional roles remain unsupporte
 - [ ] Retire the legacy certificate generators and their consumers under the script replacement plan below. Preserve existing identities and administrator trust during adoption.
 
 The separate [schema Job](../k8s/schema/job.yaml) is a tested candidate for an empty database.
+Its external launcher runs the pinned SchemaManager JAR's Flyway migrations without the vendor `repair` path.
 Fresh, repeat, and concurrent runs passed with separate credentials in disposable databases.
+A changed checksum stopped the Job without changing migration history.
 Flyway provides database-side locking. The legacy SQL dump is unnecessary for an empty database.
-The vendor command repairs Flyway metadata after an upgrade error; its `validate` command did not reject a changed checksum.
-Add a fail-closed guard before unattended upgrades. Test a populated upgrade and interrupted retry before closing this item.
+Documented data grants keep the runtime role separate from the migration owner.
+Test a populated upgrade and interrupted retry before closing this item.
 
 ### 4. Wire strict authentication and management
 

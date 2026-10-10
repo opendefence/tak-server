@@ -47,6 +47,7 @@ RUN cd /tmp \
 FROM ${JAVA_BUILD_IMAGE} AS plugin-launcher
 COPY --from=unpack /opt/tak/takserver-pm.jar /tmp/takserver-pm.jar
 COPY --from=unpack /opt/tak/takserver.war /tmp/takserver.war
+COPY --from=unpack /opt/tak/db-utils/SchemaManager.jar /tmp/SchemaManager.jar
 COPY java /tmp/tak-launcher
 WORKDIR /tmp/tak-plugin-api
 RUN jar --extract --file /tmp/takserver-pm.jar BOOT-INF/classes BOOT-INF/lib \
@@ -55,6 +56,8 @@ RUN jar --extract --file /tmp/takserver-pm.jar BOOT-INF/classes BOOT-INF/lib \
     && jar --extract --file /tmp/takserver.war WEB-INF/classes WEB-INF/lib WEB-INF/lib-provided \
     && javac --release 17 -cp '/tmp/tak-plugin-api/WEB-INF/classes:/tmp/tak-plugin-api/WEB-INF/lib/*:/tmp/tak-plugin-api/WEB-INF/lib-provided/*' \
       -d /tmp/tak-launcher/classes /tmp/tak-launcher/ServerLauncher.java \
+    && javac --release 17 -cp /tmp/SchemaManager.jar \
+      -d /tmp/tak-launcher/classes /tmp/tak-launcher/SchemaUpgrade.java \
     && jar --create --file /tmp/pvarki-launcher.jar -C /tmp/tak-launcher/classes .
 
 # Keep the distribution archive and build tools out of runtime layers.

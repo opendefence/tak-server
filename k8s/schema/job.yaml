@@ -19,12 +19,11 @@ spec:
       containers:
         - name: schema
           image: tak-server:5.8.84
-          command: [/bin/bash, -ec]
+          command: [java]
           args:
-            - >-
-              exec java -jar /opt/tak/db-utils/SchemaManager.jar
-              -url "jdbc:postgresql://${POSTGRES_ADDRESS}:5432/${POSTGRES_DB}"
-              -user "${POSTGRES_USER}" -password "${POSTGRES_PASSWORD}" upgrade
+            - -cp
+            - /opt/tak/db-utils/SchemaManager.jar:/opt/tak/lib/pvarki-launcher.jar
+            - org.opendefence.tak.SchemaUpgrade
           envFrom:
             - configMapRef: {name: tak-schema-settings}
           env:

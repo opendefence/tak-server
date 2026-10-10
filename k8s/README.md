@@ -11,7 +11,7 @@ Supply a PostgreSQL database with PostGIS and pgcrypto installed.
 Apply the separate schema Job before the server base.
 Give the migration account the rights to create and alter TAK tables.
 Keep the runtime account separate.
-The database runtime account must already have the required TAK permissions.
+Grant the runtime account data access after the schema Job completes.
 
 | Secret | Required keys | Purpose |
 | --- | --- | --- |
@@ -58,17 +58,36 @@ kubectl apply -k path/to/schema-overlay
 kubectl -n tak-server wait --for=condition=complete job/tak-schema-5-8-84 --timeout=900s
 ```
 
-The Job runs the pinned SchemaManager from the image.
+The Job uses Flyway and the migrations bundled in the pinned `SchemaManager.jar`.
+The small `SchemaUpgrade` launcher never calls the vendor `repair` path.
+It rejects a changed migration checksum and leaves the history row unchanged.
 Flyway uses a PostgreSQL advisory lock during migration.
 The versioned Job stays complete after success; a new release needs a new Job name.
-On an empty database, SchemaManager installs the schema without `takdb_base.sql`.
+On an empty database, the Job installs the schema without `takdb_base.sql`.
 The old Compose initializer still uses that file, so keep it until Compose retirement.
 Back up the database before any upgrade.
 Inspect the Job logs and schema history before starting the server.
-The vendor `upgrade` command can repair Flyway metadata after a migration error.
-Its `validate` command returned success with a deliberately changed checksum in a disposable test database.
-Do not treat this Job as an unattended production upgrade until that behavior has a fail-closed guard.
+An existing database without Flyway history needs a separate reviewed migration.
 Upgrade from an older populated schema and retry after interruption still need tests.
+
+Run these grants as a database administrator after the Job completes.
+Replace `cot`, `tak_migration`, and `tak_runtime` with the actual database and role names.
+Use the migration account as the owner of the new TAK tables.
+
+```sql
+GRANT CONNECT ON DATABASE cot TO tak_runtime;
+GRANT USAGE ON SCHEMA public TO tak_runtime;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO tak_runtime;
+REVOKE INSERT, UPDATE, DELETE ON TABLE public.schema_version FROM tak_runtime;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO tak_runtime;
+ALTER DEFAULT PRIVILEGES FOR ROLE tak_migration IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO tak_runtime;
+ALTER DEFAULT PRIVILEGES FOR ROLE tak_migration IN SCHEMA public
+  GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO tak_runtime;
+```
+
+The runtime role must not own the schema, have `CREATE` on it, or change `schema_version`.
+The disposable test runtime role could read a TAK table and could not create a table.
 
 The standalone overlay creates namespace `tak-server` and a TCP LoadBalancer Service.
 It requires the database and Secrets above. It has no Core, RMAPI, integration operator, or sibling-checkout dependency.
