@@ -23,6 +23,8 @@ This constraint supersedes the matching-source prerequisite in the imported hand
 
 Use one Pod with separate config, messaging, and API containers. Plugin manager is optional in the same Pod.
 Keep the integration JNI/operator process in a separate Pod with its own Ignite profile.
+Deploy both Pods in the `integration-tak` namespace owned by the sibling integration manifests.
+The server's integrated overlay must not create another namespace or own the sibling's workloads.
 These decisions supersede the original separate-Pod server requirement.
 Keep the original implementation handoff's remaining requirements and stage protocol.
 Its supplied file remains untracked. The missing companion migration plan has not been recovered or replaced by an assumed specification.
@@ -75,6 +77,7 @@ Implement each coherent slice in small reviewed commits. Test injection seams ag
 ### 1. Package the proven Pod and storage layout
 
 - [ ] Create one versioned Kustomize base and standalone/integrated overlays using ordinary OCI builds, Java 17, and the actual Python 3.12 runtime.
+- [x] Add a namespace-neutral server base and an integrated overlay targeting the sibling operator's namespace. Its NetworkPolicy admits the operator Pod to Ignite. Strict-mode acceptance and a pinned production image remain open.
 - [x] Correct the 64 MiB Ignite cache maximum to the tested 256 MiB value. Recheck CoT from the rendered native base, then remove the experimental live override.
 - [ ] Verify cache and container resource budgets under the intended load.
 - [x] Package the experimental adapter in the image. Use one configuration owner, non-overlapping replacement, and the lifetime lock; a singleton StatefulSet is suitable.

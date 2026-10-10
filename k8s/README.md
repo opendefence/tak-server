@@ -43,19 +43,29 @@ Pin the candidate image in an overlay before applying it. A publishing destinati
 The Kind overlay selects the local `localhost/tak-server:t2-layout-5.8.84` test image and disables pulls.
 Load that image into the intended Kind cluster before applying the overlay.
 
-Create a local overlay that consumes `k8s/base` or the standalone overlay.
+Create a local overlay that consumes `k8s/base`, `k8s/overlays/standalone`, or `k8s/overlays/integrated`.
 Set its namespace, image digest, storage size/class, advertised DNS name, and database address/name.
 Merge `tak-settings` with `configMapGenerator` and `behavior: merge`.
 Keep passwords and rendered XML out of ConfigMaps.
 
+The integrated overlay targets the `integration-tak` namespace created by the sibling
+`integration-tak/k8s/integration` deployment. It does not create or own that namespace.
+Its TAK resources, database/identity Secrets, schema Job, and PVC must all be placed
+there by the installer. The overlay allows the sibling's `app: integration-tak-operator`
+Pod to reach Ignite; it does not deploy the operator or grant it TAK Secret access.
+The sibling API and operator manifests are managed in their own repository.
+The integrated overlay is still a legacy-authentication candidate until strict
+admission and the management contract pass their acceptance checks.
+
 Create a separate local overlay for `k8s/schema`.
-Set the same namespace and image as the server overlay.
+Set the same namespace and image as the server overlay (`integration-tak` for the integrated deployment).
 Merge `tak-schema-settings` with the database address and name.
 Apply and wait for the versioned Job before starting the server:
 
 ```sh
+TAK_NAMESPACE=tak-server # use integration-tak for the integrated overlay
 kubectl apply -k path/to/schema-overlay
-kubectl -n tak-server wait --for=condition=complete job/tak-schema-5-8-84 --timeout=900s
+kubectl -n "$TAK_NAMESPACE" wait --for=condition=complete job/tak-schema-5-8-84 --timeout=900s
 ```
 
 The Job uses Flyway and the migrations bundled in the pinned `SchemaManager.jar`.
@@ -98,8 +108,8 @@ The Kind overlay uses ClusterIP services; use port forwarding for local traffic 
 
 ```sh
 kubectl apply -k path/to/local-overlay
-kubectl -n tak-server wait --for=condition=complete job/tak-admin-bootstrap --timeout=180s
-kubectl -n tak-server rollout status statefulset/tak-server --timeout=300s
+kubectl -n "$TAK_NAMESPACE" wait --for=condition=complete job/tak-admin-bootstrap --timeout=180s
+kubectl -n "$TAK_NAMESPACE" rollout status statefulset/tak-server --timeout=300s
 ```
 
 The headless discovery Service publishes the server Pod before application readiness.
@@ -116,7 +126,7 @@ Do not treat these thresholds as a service restoration guarantee; scheduling, te
 Use `scripts/restart-kubernetes.sh namespace` for coordinated Pod replacement. It reports failure after a 300-second rollout wait.
 
 The base permits CoT, HTTPS, and federation ingress. It restricts Ignite ingress to same-namespace TAK-labelled Pods.
-Integration must add explicit access for its separate JNI process. The base does not restrict egress.
+The integrated overlay also permits the sibling's operator-labelled Pod to reach Ignite. The base does not restrict egress.
 Kind policy objects are not evidence of enforcement by a production CNI.
 Expose extra administrator-created listeners through additional Service and NetworkPolicy entries.
 Keep `/Marti` TLS client authentication intact when adding external routing.
