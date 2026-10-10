@@ -109,7 +109,10 @@ Fresh, repeat, and concurrent runs passed with separate credentials in disposabl
 A changed checksum stopped the Job without changing migration history.
 Flyway provides database-side locking. The legacy SQL dump is unnecessary for an empty database.
 Documented data grants keep the runtime role separate from the migration owner.
-Test a populated upgrade and interrupted retry before closing this item.
+The repository's seeded legacy dump required exact V7/V9 checksum reconciliation.
+The disposable upgraded schema matched a fresh install. Seeded roles and three added CoT, mission, and user rows survived.
+An interrupted disposable Job stopped at blocked V98; a new Job applied V98–V106 and matched the fresh schema.
+Test a full production-like data set, reviewed adoption, and other failure points before closing this item.
 
 ### 4. Wire strict authentication and management
 

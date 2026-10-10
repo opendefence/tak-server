@@ -68,7 +68,10 @@ The old Compose initializer still uses that file, so keep it until Compose retir
 Back up the database before any upgrade.
 Inspect the Job logs and schema history before starting the server.
 An existing database without Flyway history needs a separate reviewed migration.
-Upgrade from an older populated schema and retry after interruption still need tests.
+The repository's legacy SQL dump has V7 and V9 checksum mismatches with this release.
+The Job rejects it until an operator reviews and reconciles those exact history rows.
+The disposable dump upgrade passed after that step. A new Job also resumed after the first Job stopped at a blocked V98 migration.
+A production data upgrade and other interruption modes still need tests.
 
 Run these grants as a database administrator after the Job completes.
 Replace `cot`, `tak_migration`, and `tak_runtime` with the actual database and role names.
