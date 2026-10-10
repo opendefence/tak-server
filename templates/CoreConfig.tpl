@@ -15,7 +15,7 @@
         <connector port="8443" _name="https" enableWebtak="{{getenv "WEBTAK_ENABLE" "false"}}" enableNonAdminUI="false"
             keystore="JKS"
             keystoreFile="{{getenv "TAK_HTTPS_KEYSTORE_FILENAME" "/opt/tak/data/certs/files/takserver-https.jks"}}"
-            keystorePass="{{.Env.TAKSERVER_CERT_PASS}}" />
+            keystorePass="{{getenv "TAK_HTTPS_CERT_PASS" .Env.TAKSERVER_CERT_PASS}}" />
     </network>
 {{if getenv "LDAP_BIND_PASSWORD" ""}}
     <auth default="ldap" x509groups="true" x509addAnonymous="false">
@@ -31,11 +31,11 @@
               groupNameExtractorRegex="(?:cn|CN)=(?:tak_)?(.+?),"
               groupprefix="CN=tak_"
         />
-        <File location="/opt/tak/data/UserAuthenticationFile.xml"/>
+        <File location="/opt/tak/auth/UserAuthenticationFile.xml"/>
     </auth>
 {{else}}
     <auth x509groups="true" x509addAnonymous="false">
-        <File location="/opt/tak/data/UserAuthenticationFile.xml"/>
+        <File location="/opt/tak/auth/UserAuthenticationFile.xml"/>
     </auth>
 {{end}}
     <submission ignoreStaleMessages="false" validateXml="false"/>
@@ -73,15 +73,15 @@
     <security>
         <tls context="TLSv1.2"
             keymanager="SunX509"
-            keystore="JKS" keystoreFile="/opt/tak/data/certs/files/takserver.jks" keystorePass="{{.Env.TAKSERVER_CERT_PASS}}"
-            truststore="JKS" truststoreFile="/opt/tak/data/certs/files/truststore-root.jks" truststorePass="{{.Env.CA_PASS}}"
+            keystore="JKS" keystoreFile="{{getenv "TAK_COT_KEYSTORE_FILENAME" "/opt/tak/data/certs/files/takserver.jks"}}" keystorePass="{{.Env.TAKSERVER_CERT_PASS}}"
+            truststore="JKS" truststoreFile="{{getenv "TAK_CLIENT_TRUSTSTORE_FILENAME" "/opt/tak/data/certs/files/truststore-root.jks"}}" truststorePass="{{.Env.CA_PASS}}"
             enableOCSP="{{getenv "TAK_OCSP_ENABLE" "false"}}"
             />
     </security>
 
     <federation allowFederatedDelete="false" allowMissionFederation="true" allowDataFeedFederation="true" enableMissionFederationDisruptionTolerance="true" missionFederationDisruptionToleranceRecencySeconds="43200" enableFederation="true" enableDataPackageAndMissionFileFilter="false">
         <federation-server port="9000" coreVersion="2" v1enabled="false" v2port="9001" v2enabled="true" webBaseUrl="https://{{.Env.TAK_SERVER_ADDRESS}}:8443/Marti">
-            <tls keystore="JKS" keystoreFile="certs/files/takserver.jks" keystorePass="{{.Env.TAKSERVER_CERT_PASS}}" truststore="JKS" truststoreFile="certs/files/fed-truststore.jks" truststorePass="{{.Env.CA_PASS}}" context="TLSv1.2" keymanager="SunX509"/>
+            <tls keystore="JKS" keystoreFile="{{getenv "TAK_COT_KEYSTORE_FILENAME" "certs/files/takserver.jks"}}" keystorePass="{{.Env.TAKSERVER_CERT_PASS}}" truststore="JKS" truststoreFile="certs/files/fed-truststore.jks" truststorePass="{{.Env.CA_PASS}}" context="TLSv1.2" keymanager="SunX509"/>
             <federation-port port="9000" tlsVersion="TLSv1.2"/>
             <v1Tls tlsVersion="TLSv1.2"/>
             <v1Tls tlsVersion="TLSv1.3"/>

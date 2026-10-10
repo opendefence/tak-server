@@ -19,6 +19,14 @@ cd ${TR}
 
 # This will set bunch of variables
 . ./setenv.sh
+# The vendor script forces TLS 1.2 for outbound clients; CNPG can require TLS 1.3.
+export JDK_JAVA_OPTIONS="${JDK_JAVA_OPTIONS} -Djdk.tls.client.protocols=TLSv1.3,TLSv1.2"
+case "$1" in
+  config|messaging|api)
+    export LOADER_MAIN=org.opendefence.tak.ServerLauncher
+    export JDK_JAVA_OPTIONS="${JDK_JAVA_OPTIONS} -Dloader.path=WEB-INF/lib-provided,WEB-INF/lib,WEB-INF/classes,file:lib/"
+    ;;
+esac
 
 # Start the right process
 if [ $1 = "messaging" ]; then
@@ -32,13 +40,14 @@ elif [ $1 = "api" ]; then
     # TAK applies CoreConfig keystore overrides only to additional connectors.
     # Its primary HTTPS connector reads Spring's SSL properties instead.
     export SERVER_SSL_KEY_STORE="${TAK_HTTPS_KEYSTORE_FILENAME:-/opt/tak/data/certs/files/takserver-https.jks}"
+    export SERVER_SSL_KEY_STORE_PASSWORD="${TAK_HTTPS_CERT_PASS:-${TAKSERVER_CERT_PASS}}"
     exec java -jar -Xmx${API_MAX_HEAP}m -Dspring.profiles.active=api,consolelog -Dkeystore.pkcs12.legacy takserver.war
 elif [ $1 = "retention" ]; then
     echo "Starting TAK Retention"
-    exec java -jar -Xmx${RETENTION_MAX_HEAP}m takserver-retention.jar
+    exec java -jar -Xmx${RETENTION_MAX_HEAP}m -Dlogback.configurationFile="${LOGGING_CONFIG:-${TR}/logback-stdout.xml}" takserver-retention.jar
 elif [ $1 = "pm" ]; then
     echo "Starting TAK Plugin Manager"
-    exec java -jar -Xmx${PLUGIN_MANAGER_MAX_HEAP}m -Dloader.path=WEB-INF/lib-provided,WEB-INF/lib,WEB-INF/classes,file:lib/ takserver-pm.jar
+    exec java -jar -Xmx${PLUGIN_MANAGER_MAX_HEAP}m -Dlogback.configurationFile="${LOGGING_CONFIG:-${TR}/logback-stdout.xml}" -Dloader.main=fi.pvarki.tak.PluginLauncher -Dloader.path=WEB-INF/lib-provided,WEB-INF/lib,WEB-INF/classes,file:lib/ takserver-pm.jar
 else
   echo "Please provide right TAK component: messaging, config, api, retention or pm"
 fi

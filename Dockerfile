@@ -4,6 +4,7 @@
 ########################################################################
 ARG TEMURIN_VERSION="17"
 ARG JAVA_RUNTIME_IMAGE="eclipse-temurin:${TEMURIN_VERSION}-jre-noble"
+ARG JAVA_BUILD_IMAGE="eclipse-temurin:${TEMURIN_VERSION}-jdk-noble"
 ARG TAK_RELEASE="5.8-RELEASE-84"
 ARG KW_PRODUCT_INIT_IMAGE="ghcr.io/pvarki/kraftwerk-helper-tool:1.4.0-260912"
 FROM ${KW_PRODUCT_INIT_IMAGE} AS product-init
@@ -42,9 +43,24 @@ RUN cd /tmp \
     && mv $DISTDIR"/tak" /opt/tak \
     && true
 
-# Keep the distribution archive out of the runtime image's layers.
+# Compile the external launcher against the selected vendor binary.
+FROM ${JAVA_BUILD_IMAGE} AS plugin-launcher
+COPY --from=unpack /opt/tak/takserver-pm.jar /tmp/takserver-pm.jar
+COPY --from=unpack /opt/tak/takserver.war /tmp/takserver.war
+COPY java /tmp/tak-launcher
+WORKDIR /tmp/tak-plugin-api
+RUN jar --extract --file /tmp/takserver-pm.jar BOOT-INF/classes BOOT-INF/lib \
+    && javac --release 17 -cp '/tmp/tak-plugin-api/BOOT-INF/classes:/tmp/tak-plugin-api/BOOT-INF/lib/*' \
+      -d /tmp/tak-launcher/classes /tmp/tak-launcher/PluginLauncher.java \
+    && jar --extract --file /tmp/takserver.war WEB-INF/classes WEB-INF/lib WEB-INF/lib-provided \
+    && javac --release 17 -cp '/tmp/tak-plugin-api/WEB-INF/classes:/tmp/tak-plugin-api/WEB-INF/lib/*:/tmp/tak-plugin-api/WEB-INF/lib-provided/*' \
+      -d /tmp/tak-launcher/classes /tmp/tak-launcher/ServerLauncher.java \
+    && jar --create --file /tmp/pvarki-launcher.jar -C /tmp/tak-launcher/classes .
+
+# Keep the distribution archive and build tools out of runtime layers.
 FROM deps AS install
 COPY --from=unpack /opt/tak /opt/tak
+COPY --from=plugin-launcher /tmp/pvarki-launcher.jar /opt/tak/lib/pvarki-launcher.jar
 COPY docker/entrypoint.sh /entrypoint.sh
 COPY scripts /opt/scripts
 COPY templates /opt/templates
