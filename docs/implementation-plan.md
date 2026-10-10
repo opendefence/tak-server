@@ -65,17 +65,20 @@ Agree the trusted management writer, transport, freshness bound, and capability 
 
 ## T2 implementation slices
 
-T2 remains at its required `gpt-6.1-sol` / `high` gate. Consolidation does not confirm a model switch or start this stage.
+T2 began after the user's explicit `Switched; resume T2` confirmation for `gpt-6.1-sol` / `high`.
+It is now held at T1's investigation gate for the failed CoT check. Runtime model metadata is unavailable.
+See [native layout evidence](t2-native-layout.md).
 Implement each coherent slice in small reviewed commits. Test injection seams against the pinned binaries before wiring strict authentication.
 
 ### 1. Package the proven Pod and storage layout
 
 - [ ] Create one versioned Kustomize base and standalone/integrated overlays using ordinary OCI builds, Java 17, and the actual Python 3.12 runtime.
-- [ ] Package the experimental adapter in the image. Use one configuration owner, non-overlapping replacement, and the lifetime lock; a singleton StatefulSet is suitable.
-- [ ] Preserve `/opt/tak/data/CoreConfig_config.xml` and config-container compatibility links. Retain `coreconfig.py` ownership merge, XSD validation, restrictive modes, backup, and atomic startup publication.
-- [ ] Seed private follower files from the validated authority. Keep ConfigMaps/Secrets as inputs and administrator-owned peers, groups, policy, listeners, and federation trust on persistent storage.
-- [ ] Give messaging persistent file-auth and API a private file-auth directory, including its backup. Persist owner backups, tighten permissions, and inventory mission/content/audit writes before moving mounts.
-- [ ] Document `coreconfig.MANAGED`, LDAP replacement, and separately declared Service/NetworkPolicy exposure for additional listeners. Preserve PVCs; RWO is not a lock and local-path results do not prove node reattachment.
+- [x] Package the experimental adapter in the image. Use one configuration owner, non-overlapping replacement, and the lifetime lock; a singleton StatefulSet is suitable.
+- [x] Preserve `/opt/tak/data/CoreConfig_config.xml` and config-container compatibility links. Retain `coreconfig.py` ownership merge, XSD validation, restrictive modes, backup, and atomic startup publication.
+- [x] Seed private follower files from the validated authority. Keep ConfigMaps/Secrets as inputs and administrator-owned peers, groups, policy, listeners, and federation trust on persistent storage.
+- [x] Give messaging persistent file-auth and API a private file-auth directory, including its backup. Persist owner backups and tighten permissions.
+- [ ] Inventory mission/content/audit writes before moving mounts.
+- [x] Document `coreconfig.MANAGED`, LDAP replacement, and separately declared Service/NetworkPolicy exposure for additional listeners. Preserve PVCs; RWO is not a lock and local-path results do not prove node reattachment.
 
 Reuse the [storage design](coreconfig-kubernetes-design.md). Do not add a whole-file watcher or force-save JNI loop.
 
