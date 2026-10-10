@@ -32,7 +32,16 @@ The earlier report overstated the need for a TAK patch to prevent them.
 
 File-auth needs separate isolation. The old template still used one `/opt/tak/data/UserAuthenticationFile.xml` path.
 API initialization obtains that path from remote CoreConfig, so changing only its local CoreConfig attribute may not redirect the write.
-The same path can resolve to different storage in each Pod. Verify messaging persistence and API-local storage before proposing application changes.
+The same path can resolve to different storage in each container. Verify messaging persistence and API-local storage before proposing application changes.
+
+## Private CoreConfig fixture
+
+The [shared-Pod follow-up](../../docs/t1-single-pod-findings.md) restored private CoreConfigs for messaging, API, and plugin manager.
+Actual admin saves changed only the config authority among the four inspected CoreConfig files.
+Follower hashes stayed unchanged while API reads returned the new settings.
+Full Pod replacement preserved the edits and seeded fresh follower copies from the saved authority.
+See [selected path and value evidence](../001-coreconfig-admin-edits-lost/private-files-evidence.json).
+This validates the tested bootstrap and admin-save path. File-auth isolation, overlapping writes, upgrade paths, and process-level traces remain untested.
 
 ## Reproduction still needed
 
@@ -52,4 +61,5 @@ Coordinate the change with [001](../001-coreconfig-admin-edits-lost/HANDOFF.md);
 
 Acceptance requires process-level write traces, competing-owner rejection, simultaneous user-update/startup tests, and restart/upgrade preservation.
 Only the designated owner may open each persistent authority for writing.
-An application change is needed only if verified runtime behavior cannot preserve this separation. No race reproduction or isolation acceptance is complete.
+An application change is needed only if verified runtime behavior cannot preserve this separation.
+The private CoreConfig fixture passed; full ownership acceptance and a race reproduction remain incomplete.

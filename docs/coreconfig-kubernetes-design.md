@@ -7,7 +7,9 @@ Only the config service uses the persistent CoreConfig as its local file.
 Other roles use private, writable bootstrap copies and receive runtime configuration through Ignite.
 No new operator or synchronization sidecar is needed.
 
-This records the T1 storage decision. It does not resolve the TAK Java persistence defects or complete T1.
+The user selected one Pod with separate role containers.
+The [T1 follow-up](t1-single-pod-findings.md) verifies admin persistence with private follower files in that topology.
+It leaves the Java publication and file-auth failure risks open.
 
 ## Ownership
 
@@ -33,9 +35,9 @@ See the [ConfigMap documentation](https://kubernetes.io/docs/concepts/configurat
 
 ## Startup and updates
 
-1. Mount the PVC directory at `/opt/tak/data` in the config Pod.
+1. Mount the PVC directory at `/opt/tak/data` in the config container.
 2. Keep `/opt/tak/data/CoreConfig_config.xml` as the canonical saved file.
-3. In that Pod, keep `/opt/tak/CoreConfig.xml` and `/opt/tak/data/CoreConfig.xml` as compatibility links to it.
+3. In that container, keep `/opt/tak/CoreConfig.xml` and `/opt/tak/data/CoreConfig.xml` as compatibility links to it.
 4. Let the config startup wrapper acquire the existing exclusive lock.
 5. Render a temporary template from ConfigMap and Secret inputs.
 6. Merge the managed attributes into the saved XML. Seed from the template only when no saved or legacy file exists.
@@ -45,7 +47,9 @@ See the [ConfigMap documentation](https://kubernetes.io/docs/concepts/configurat
 
 Followers must link their `/opt/tak/CoreConfig.xml` to a private file instead of the persistent authority.
 They may write defaults or upgrades to that private file.
-Verify which fields they read locally before replacing saved-state bootstrap input with a fresh template.
+Seed these copies from the validated authority after the config wrapper completes its merge.
+The live test confirmed that the selected admin edits reach the owner while follower copies stay unchanged.
+Verify other local reads before replacing saved-state bootstrap input with a fresh template.
 Their runtime use of administrator settings through Ignite does not require sharing the on-disk authority.
 
 Mount the containing directory so the merger can create temporary files, replace the canonical file, and retain backups together.
@@ -58,7 +62,7 @@ Keep this merge in the existing startup wrapper.
 A completed init container cannot retain the lifetime lock or rerun the merge after an application-container restart.
 Do not add a file watcher that merges deployment inputs while the JVM is saving administrator changes.
 
-Change deployment inputs through a controlled replacement of the config Pod.
+Change deployment inputs through a controlled replacement of the shared server Pod.
 Kustomize's generated ConfigMap names include a content hash, which can change the referenced Pod template when inputs change.
 Coordinate the affected role restarts; a changed reference alone does not establish safe ordering.
 T1 must establish the supported recovery procedure before production rollout.
@@ -73,15 +77,14 @@ It does not stop Java code that writes without acquiring that lock.
 All administrator CoreConfig saves must reach the configuration-service owner before this model is accepted.
 Use private follower files to isolate their local startup writes.
 
-The recorded T1 baseline used a shared RWO PVC and same-node placement.
-That experiment linked every role to the same CoreConfig; it did not validate the private-file design.
+The original T1 baseline used a shared RWO PVC and same-node placement across three Pods.
+The follow-up uses one Pod and private follower CoreConfigs.
 RWO allows several Pods on one node; it does not enforce one writer.
-Do not switch this shared claim to `ReadWriteOncePod`: that mode permits only one Pod to mount it.
-A dedicated config-only PVC could use `ReadWriteOncePod` with a supporting CSI driver after the other roles no longer need to mount it.
-That is a separate runtime change, not a prerequisite for preserving administrator edits.
+`ReadWriteOncePod` can serve several containers in the selected single Pod when the CSI driver supports it.
+The tested local-path claim remains RWO. It does not establish RWOP support or movable storage.
 See the [persistent-volume access modes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes).
 
-A singleton StatefulSet is a suitable native controller for a persistent config owner.
+A singleton StatefulSet is a suitable native controller for the shared server Pod and its persistent config owner.
 Changing the controller does not fix Java saves or remove the shared-volume constraints.
 The current `Recreate` Deployment prevents rollout overlap, but does not guarantee this during manual Pod deletion.
 Keep the lock and storage constraints even if the controller changes.
@@ -115,7 +118,8 @@ Restore private follower paths before requiring an application change for those 
 The persistent owner's [unsafe publication](../bugreports/004-unsafe-xml-publication/HANDOFF.md) remains a separate concern.
 The save guard also remains independent of file isolation; trace writes in an isolated-file reproduction to exclude an additional race.
 
-After the application persistence decision, verify a real admin edit reaches the canonical file.
-Then change a managed input, replace the config Pod, and verify both values survive in the saved file and the admin API.
-Verify follower startup and upgrades cannot overwrite that state.
-The existing [T1 findings](t1-runtime-findings.md) define the application-patch boundary and recovery work still required.
+Real admin saves and full Pod replacement passed with the private-file fixture.
+T2 must implement this adapter behavior and isolate file-auth storage by role.
+Then change a managed input, replace the server Pod, and verify both values survive in the saved file and the admin API.
+Verify follower upgrades cannot overwrite that state. Test interrupted owner saves separately.
+The [T1 follow-up](t1-single-pod-findings.md) records the selected architecture and release limits.

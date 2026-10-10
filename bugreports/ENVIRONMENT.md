@@ -1,7 +1,8 @@
 # Shared T1 environment
 
-These reports describe the test performed on 2026-10-10.
-Packaging the evidence did not rerun or modify the application.
+These reports describe tests performed on 2026-10-10.
+The original reproduction used separate Pods as described below.
+The later [shared-Pod follow-up](../docs/t1-single-pod-findings.md) uses the same server image with experimental file isolation and an external plugin launcher.
 
 | Item | Tested value |
 | --- | --- |
@@ -23,7 +24,7 @@ The candidate overlays PR startup, Ignite, healthcheck, Java trust, and UserMana
 The TAK binaries remain unchanged. The older release selected by the full PR was not adopted.
 The adapter tests passed: 27 tests inside the candidate image.
 
-## Preconditions for reproduction
+## Preconditions for the original reproduction
 
 - Run config, messaging, and API as separate Pods, each with one service container and a different Pod IP.
 - Use the Downward API for Ignite binding and private runtime volumes for Ignite configuration and work files.

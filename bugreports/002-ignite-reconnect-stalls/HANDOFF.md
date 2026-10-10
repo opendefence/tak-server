@@ -35,7 +35,18 @@ Do not assume that a new standalone CLI client proves existing API/config client
 
 Use a non-mutating remote invocation to detect failure. `getRemoteConfiguration()` can return cached state and is not sufficient by itself.
 The observed admin user-list request is a diagnostic; it is not yet a minimal production readiness design.
-Keep separate Pods. Do not use a shared network namespace or proxy sidecars as a workaround.
+The user later selected a shared Pod. This supersedes the original handoff's separate-Pod requirement.
+Keep the original reproduction as upstream evidence rather than treating the topology change as an upstream fix.
+
+## Shared-Pod follow-up
+
+With config, messaging, and API in one Pod, a messaging-container restart kept the Pod IP at `10.244.0.26`.
+The existing API and config containers did not restart.
+Authenticated user-list reads and bidirectional CoT passed within 33 seconds of the restart request in this observation.
+A full Pod replacement also restored those checks and preserved the tested administrator edits.
+See [selected evidence](../001-coreconfig-admin-edits-lost/single-pod-evidence.json) and [the follow-up findings](../../docs/t1-single-pod-findings.md).
+These results support coordinated Pod replacement and remove the independent new-IP role change from the intended deployment.
+They do not prove a production time bound or repair the separate-Pod failure.
 
 Acceptance requires repeated new-IP replacement, bounded detection, and recovery of existing API/config clients, a separate JNI client, verified HTTPS, and authenticated CoT.
 Any coordinated recovery must cap retries, reject concurrent config owners, report failure, and preserve administrator state.

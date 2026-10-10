@@ -1,0 +1,223 @@
+{
+  "environment": "../ENVIRONMENT.md",
+  "final_api": {
+    "authenticated_cot": "Passed in both directions",
+    "federation_put_status": 200,
+    "missionFederationDisruptionToleranceRecencySeconds": 43202,
+    "outgoing_peer_post_status": 200,
+    "peers": [
+      "t1_singlepod_peer",
+      "t1_private_peer"
+    ],
+    "reads_status": 200
+  },
+  "jni": {
+    "container_restarts": 0,
+    "continuous_query_recovery": "Not tested; Ignite warns that subscriptions must be restored after reconnect",
+    "first_success_per_ignite_node": [
+      {
+        "node": "c6a1b73a-5856-4053-8434-6559bf401f15",
+        "time": 1791654177.7949924,
+        "users": 3
+      },
+      {
+        "node": "c895222b-38c6-4faf-9a80-e64fe3b471cd",
+        "time": 1791654214.5741694,
+        "users": 3
+      },
+      {
+        "node": "0daae74e-1e04-4b5d-8e0a-c2af08f54d6b",
+        "time": 1791654335.3164673,
+        "users": 3
+      }
+    ],
+    "image_manifest": "sha256:1d4d3bad1679e6a5795ca2b6785be8372b367a50102442075c564d95e38ba62f",
+    "observed_failure_types": [
+      "ComputeTaskTimeoutException",
+      "IgniteClientDisconnectedException"
+    ],
+    "operation": "getUserList",
+    "pod_ip": "10.244.0.29",
+    "profile": "t1-jni",
+    "rollouts": [
+      {
+        "elapsed_seconds": 18.574,
+        "first_success_at": "2026-10-10T17:43:34.574Z",
+        "new_server_ip": "10.244.0.30",
+        "old_server_ip": "10.244.0.26",
+        "started_at": "2026-10-10T17:43:16Z"
+      },
+      {
+        "elapsed_seconds": 42.316,
+        "first_success_at": "2026-10-10T17:45:35.316Z",
+        "new_server_ip": "10.244.0.31",
+        "old_server_ip": "10.244.0.30",
+        "started_at": "2026-10-10T17:44:53Z"
+      }
+    ],
+    "service": "distributed-user-file-manager",
+    "successful_user_count": 3
+  },
+  "limits": [
+    "File-auth is still shared between API and messaging in this fixture.",
+    "The probe is a disposable JNI read client, not the integration controller.",
+    "No interrupted XML save, third-party plugin callback, or supported upgrade was tested."
+  ],
+  "observed_on": "2026-10-10",
+  "private_coreconfig": {
+    "after_admin_saves": [
+      {
+        "path": "/opt/tak/data/CoreConfig_config.xml",
+        "peers": [
+          "t1_singlepod_peer",
+          "t1_private_peer"
+        ],
+        "role": "config",
+        "sha256": "sha256:22e46a3b64dc9e9e66bffa77c32d5976331d69c8d901c1b4cd524ae5c21f7fa5",
+        "timing": [
+          "43202"
+        ]
+      },
+      {
+        "path": "/opt/tak/runtime/messaging/CoreConfig.xml",
+        "peers": [
+          "t1_singlepod_peer"
+        ],
+        "role": "messaging",
+        "sha256": "sha256:6c5a996b4204ac2f09ab58dcd239ba3461adf1aad092348176a79626e467ace7",
+        "timing": [
+          "43201"
+        ]
+      },
+      {
+        "path": "/opt/tak/runtime/api/CoreConfig.xml",
+        "peers": [
+          "t1_singlepod_peer"
+        ],
+        "role": "api",
+        "sha256": "sha256:6c5a996b4204ac2f09ab58dcd239ba3461adf1aad092348176a79626e467ace7",
+        "timing": [
+          "43201"
+        ]
+      },
+      {
+        "path": "/opt/tak/runtime/pm/CoreConfig.xml",
+        "peers": [
+          "t1_singlepod_peer"
+        ],
+        "role": "pm",
+        "sha256": "sha256:6c5a996b4204ac2f09ab58dcd239ba3461adf1aad092348176a79626e467ace7",
+        "timing": [
+          "43201"
+        ]
+      }
+    ],
+    "after_pod_replacement": [
+      {
+        "path": "/opt/tak/data/CoreConfig_config.xml",
+        "peers": [
+          "t1_singlepod_peer",
+          "t1_private_peer"
+        ],
+        "role": "config",
+        "sha256": "sha256:eb14bc85b90643f84346e177b5199eea8bebc3ba910fb7ff424d20d0fae0eae7",
+        "timing": [
+          "43202"
+        ]
+      },
+      {
+        "path": "/opt/tak/runtime/messaging/CoreConfig.xml",
+        "peers": [
+          "t1_singlepod_peer",
+          "t1_private_peer"
+        ],
+        "role": "messaging",
+        "sha256": "sha256:eb14bc85b90643f84346e177b5199eea8bebc3ba910fb7ff424d20d0fae0eae7",
+        "timing": [
+          "43202"
+        ]
+      },
+      {
+        "path": "/opt/tak/runtime/api/CoreConfig.xml",
+        "peers": [
+          "t1_singlepod_peer",
+          "t1_private_peer"
+        ],
+        "role": "api",
+        "sha256": "sha256:eb14bc85b90643f84346e177b5199eea8bebc3ba910fb7ff424d20d0fae0eae7",
+        "timing": [
+          "43202"
+        ]
+      },
+      {
+        "path": "/opt/tak/runtime/pm/CoreConfig.xml",
+        "peers": [
+          "t1_singlepod_peer",
+          "t1_private_peer"
+        ],
+        "role": "pm",
+        "sha256": "sha256:eb14bc85b90643f84346e177b5199eea8bebc3ba910fb7ff424d20d0fae0eae7",
+        "timing": [
+          "43202"
+        ]
+      }
+    ],
+    "before": [
+      {
+        "path": "/opt/tak/data/CoreConfig_config.xml",
+        "peers": [
+          "t1_singlepod_peer"
+        ],
+        "role": "config",
+        "sha256": "sha256:6c5a996b4204ac2f09ab58dcd239ba3461adf1aad092348176a79626e467ace7",
+        "timing": [
+          "43201"
+        ]
+      },
+      {
+        "path": "/opt/tak/runtime/messaging/CoreConfig.xml",
+        "peers": [
+          "t1_singlepod_peer"
+        ],
+        "role": "messaging",
+        "sha256": "sha256:6c5a996b4204ac2f09ab58dcd239ba3461adf1aad092348176a79626e467ace7",
+        "timing": [
+          "43201"
+        ]
+      },
+      {
+        "path": "/opt/tak/runtime/api/CoreConfig.xml",
+        "peers": [
+          "t1_singlepod_peer"
+        ],
+        "role": "api",
+        "sha256": "sha256:6c5a996b4204ac2f09ab58dcd239ba3461adf1aad092348176a79626e467ace7",
+        "timing": [
+          "43201"
+        ]
+      },
+      {
+        "path": "/opt/tak/runtime/pm/CoreConfig.xml",
+        "peers": [
+          "t1_singlepod_peer"
+        ],
+        "role": "pm",
+        "sha256": "sha256:6c5a996b4204ac2f09ab58dcd239ba3461adf1aad092348176a79626e467ace7",
+        "timing": [
+          "43201"
+        ]
+      }
+    ]
+  },
+  "source_artifacts": [
+    "outputs/t1/singlepod/private-paths-before.jsonl",
+    "outputs/t1/singlepod/private-paths-after.jsonl",
+    "outputs/t1/singlepod/private-paths-restarted.jsonl",
+    "outputs/t1/singlepod/final-peers.json",
+    "outputs/t1/singlepod/final-federation.json",
+    "outputs/t1/singlepod/final-cot.txt",
+    "outputs/t1/jni/final.log",
+    "outputs/t1/jni/pod-final.json"
+  ],
+  "source_checksums": "../SOURCE-SHA256SUMS"
+}

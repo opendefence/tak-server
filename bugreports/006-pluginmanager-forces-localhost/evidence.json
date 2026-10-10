@@ -1,0 +1,48 @@
+{
+  "current_binary": {
+    "class_matches_old_report": true,
+    "inspection": "main overrides the XML host with 127.0.0.1. The private static Ignite field used by the workaround is present.",
+    "jar_sha256": "sha256:e4db91eb43e346c24a6ff863ffa90f2caa2ed556a2d5238f6691ed0be5feec60",
+    "plugin_service_class_sha256": "sha256:16cb85740321dcb12dc5425adf46c35488b15925f83953e95932a6d302310674",
+    "tak_release": "5.8-RELEASE-84"
+  },
+  "environment": "../ENVIRONMENT.md",
+  "limits": [
+    "The original launcher failure was not rerun on 5.8.84.",
+    "API availability logs do not test third-party plugin callbacks or recovery after messaging loss.",
+    "Private-field reflection remains release-specific."
+  ],
+  "observed_on": "2026-10-10",
+  "redaction": "Only hashes, class behavior, test Pod IPs, API names, and result summaries are retained. The supplied ZIP and binaries remain outside this commit.",
+  "source_artifacts": [
+    "outputs/t1/pluginservice-5.8.84-bytecode.txt",
+    "outputs/t1/plugin-launcher/startup.log",
+    "outputs/t1/plugin-launcher/pod-ready.json",
+    "outputs/t1/plugin-launcher/users.json",
+    "outputs/t1/plugin-launcher/colocated-restarted.log"
+  ],
+  "source_checksums": "../SOURCE-SHA256SUMS",
+  "source_report": {
+    "bundle_checksums_passed": 13,
+    "path": "bugreports/old/tak-pluginmanager-localhost-20260913.zip",
+    "sha256": "sha256:eb3fa00471ba3b9a1103e9fd0f1020f65b565ca55e42247855366504616618d7",
+    "tak_release": "5.8-RELEASE-69"
+  },
+  "workaround": {
+    "admin_user_list_http_status": 200,
+    "colocated_restart_apis_available": true,
+    "compile": "javac --release 17 against the selected plugin JAR's BOOT-INF/classes and BOOT-INF/lib",
+    "compiled_jar_sha256": "sha256:b57c745193af0f78b415269f5198bee8066cee0ad7c9754c822d3e0d3784dd1c",
+    "ignite_started_at_utc": "2026-10-10T17:39:45Z",
+    "plugin_pod_ip": "10.244.0.27",
+    "ready_marker_created": true,
+    "remote_apis_available": [
+      "pluginDataFeedApi",
+      "pluginMissionApi",
+      "pluginCoreConfigApi"
+    ],
+    "server_pod_ip": "10.244.0.26",
+    "source_sha256": "sha256:7cfb8744849f8970730c3e56fb614c09eb2ab2863e9d484a8c32ddadfdea4eb8",
+    "tak_classes_modified": false
+  }
+}

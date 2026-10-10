@@ -4,6 +4,16 @@ Status: open, reproduced. Impact: accepted administrator configuration is lost o
 Affected candidate: TAK `5.8-RELEASE-84`; see [environment](../ENVIRONMENT.md).
 Evidence: [selected responses and file observations](evidence.json).
 
+## Shared-Pod control experiment
+
+The user selected a shared Pod after the original separate-Pod reproduction.
+With the same image, PVC, and shared-file mapping, both administrator edits reached the canonical XML.
+The disabled peer and recency value survived a full Pod replacement from `10.244.0.25` to `10.244.0.26`.
+Authenticated user-list reads and bidirectional CoT passed after replacement.
+See [selected control evidence](single-pod-evidence.json) and [the follow-up findings](../../docs/t1-single-pod-findings.md).
+This supports the address-locality explanation. It does not exclude every possible concurrent-write race.
+The upstream defect remains relevant to separate role addresses. Co-location avoids this tested trigger without a TAK patch.
+
 ## Reproduction
 
 1. Start the three roles using the shared environment. Confirm the test peer is absent and the recency value is `43200`.
@@ -72,13 +82,13 @@ No watcher, hook, or forced save was installed or executed.
 
 ## Handoff
 
-Obtain matching source or a fixed vendor build, then reproduce before editing.
+For an upstream fix, obtain matching source or a fixed vendor build, then reproduce before editing.
 The proposed fix makes the configuration service the persistent writer independently of IP equality.
 Keep save failures visible to the caller. Isolate follower files as described in [003](../003-multiple-xml-writers/HANDOFF.md) before deciding whether startup paths need an application change. Review publication separately in [004](../004-unsafe-xml-publication/HANDOFF.md).
 Do not globally change `areTakserverIgnitesLocal()` or enable TAK cluster mode to bypass this condition.
-The source patch decision remains open.
+The selected shared-Pod architecture does not require this source patch to pass the tested saves.
 
 Acceptance requires both edits to reach the PVC before successful completion and survive config/API restart, full rollout, and a supported upgrade.
 Managed-input reconciliation must preserve these administrator-owned fields.
 Regression checks must also cover the existing same-address mode and offline tools.
-No fix, supported-upgrade result, or complete admin persistence acceptance is claimed.
+No upstream fix, supported-upgrade result, or complete release acceptance is claimed.

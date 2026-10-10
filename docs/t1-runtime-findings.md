@@ -1,6 +1,8 @@
 # T1 runtime findings
 
-T1 is incomplete. A TAK application change still needs approval. Adapter file isolation can be tested independently.
+T1 runtime decisions are complete after the [shared-Pod follow-up](t1-single-pod-findings.md).
+The user selected co-location, which supersedes the original separate-Pod constraint.
+The earlier separate-Pod observations below remain valid. Their application-patch proposal is not the selected implementation path.
 The user confirmed `gpt-6-astra` / `xhigh` with `Switched; resume T1`.
 This is user confirmation, not runtime metadata verification.
 All observations below are from 2026-10-10.
@@ -153,13 +155,13 @@ Reissuing the unused test identities produced matching stores and successful sta
 The final adapter must activate a coherent identity and password generation.
 This experiment does not establish renewal activation or federation-trust preservation across renewal.
 
-## Required decision
+## Historical separate-Pod patch proposal
 
-The handoff requires a pause when essential behavior needs an unapproved TAK patch or major architecture change.
+This proposal preceded the user's shared-Pod decision. No application patch was authorized or made.
 Separate Pods cannot pass administrator persistence with the tested save condition.
 Enabling TAK cluster mode would change paths and writer behavior. It is not an accepted workaround.
 
-First restore private follower CoreConfigs in the adapter experiment and isolate file-auth storage by role.
+For continued separate-Pod research, restore private follower CoreConfigs and isolate file-auth storage by role.
 Repeat the admin edit with write tracing. File separation does not change the verified save guard, but it removes a possible competing writer.
 Startup writes to private files do not require an application patch.
 
@@ -178,7 +180,8 @@ Matching source or a vendor-fixed distribution is needed.
 The public `TAK-Product-Center/Server` repository returned no `5.8*` tags when queried.
 This does not establish whether matching source is available through another authorized channel.
 The existing source-build Dockerfile targets an older release and is not a validated 5.8 build path.
-No application patch, binary replacement, or new supported runtime is approved by this evidence.
+The later shared-Pod and private-file experiments passed the tested administrator saves with the original binaries.
+Their observations and remaining publication risks are recorded in the [follow-up](t1-single-pod-findings.md).
 
 ## Evidence and remaining work
 
@@ -196,6 +199,7 @@ Some contain credentials or tokens. Keep them out of commits.
 The owned cluster, namespace, data PVC, database, and completed Jobs remain for investigation.
 Unrelated clusters and containers were not changed. Nothing was pushed or published.
 
-T1 remains open. The migration plan is still missing; its path or a requirements waiver was requested.
-Separate JNI, renewal, supported upgrade, restore, concurrent migration, optional roles, real federation, offline operation, and production NetworkPolicy checks remain unverified.
+T1 can hand off the selected runtime to T2. The migration plan is still missing; its location was requested.
+The follow-up verifies a separate JNI read client and plugin launcher startup/replacement.
+Renewal, supported upgrade, restore, concurrent migration, retention, third-party plugins, real federation, offline operation, and production NetworkPolicy checks remain unverified.
 Do not promote this candidate or enable image publication.
