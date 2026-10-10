@@ -30,6 +30,19 @@ The backup location is also a packaging issue: the supplied path and its backup 
 Do not require a canonical-path application patch solely to correct the tested mount/link layout.
 Atomic publication remains a separate application concern. No crash loss has been reproduced.
 
+## T2 backup placement
+
+The native candidate first linked the root backup path to the PVC backup path.
+A real admin save replaced that link with a regular container-layer file. The backup target was absent.
+This disproved the link-only packaging fix; Python write-through tests did not exercise the vendor copy routine.
+
+The external launcher now sets the public `LocalConfiguration.CONFIG_FILE` to the actual absolute role path before server startup.
+The unchanged JAXB utility creates its backup beside that path.
+A real admin save then created `/opt/tak/data/CoreConfig_config.xml.backup` with mode `0600`.
+The root compatibility link remained intact. Private follower writes did not reach the persistent authority.
+See [T2 evidence](../../docs/t2-native-layout.md) for the image and unchanged vendor checksums.
+This fixes backup placement in the selected packaging. It does not fix truncating publication or prove crash durability.
+
 ## Reproduction and handoff
 
 Use disposable files with the exact JAXB utility and a configuration object from the selected release.

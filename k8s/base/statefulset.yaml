@@ -1,0 +1,160 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tak-server
+  labels:
+    app.kubernetes.io/name: tak-server
+spec:
+  serviceName: tak-ignite
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tak-server
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: tak-server
+        app.kubernetes.io/component: server
+      annotations:
+        sidecar.istio.io/inject: "false"
+        linkerd.io/inject: disabled
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      initContainers:
+        - name: volume
+          image: tak-server:5.8.84
+          args: [/usr/bin/python3, /opt/scripts/initialize_volume.py]
+          env:
+            - name: CA_PASS
+              valueFrom:
+                secretKeyRef: {name: tak-store-passwords, key: trust-password}
+          volumeMounts:
+            - {name: data, mountPath: /opt/tak/data}
+            - {name: federation, mountPath: /identities/federation, readOnly: true}
+          securityContext: &security
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            seccompProfile: {type: RuntimeDefault}
+      containers:
+        - &role
+          name: config
+          image: tak-server:5.8.84
+          args: [/opt/scripts/start-tak.sh, config]
+          envFrom:
+            - configMapRef: {name: tak-settings}
+          env:
+            - name: TAK_IGNITE_BIND_ADDRESS
+              valueFrom:
+                fieldRef: {fieldPath: status.podIP}
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef: {name: tak-database-runtime, key: username}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: tak-database-runtime, key: password}
+            - name: TAKSERVER_CERT_PASS
+              valueFrom:
+                secretKeyRef: {name: tak-store-passwords, key: cot-password}
+            - name: TAK_HTTPS_CERT_PASS
+              valueFrom:
+                secretKeyRef: {name: tak-store-passwords, key: https-password}
+            - name: CA_PASS
+              valueFrom:
+                secretKeyRef: {name: tak-store-passwords, key: trust-password}
+          readinessProbe: &probe
+            exec:
+              command: [/usr/bin/python3, /opt/scripts/healthcheck.py, config]
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 1
+          startupProbe:
+            <<: *probe
+            periodSeconds: 5
+            failureThreshold: 60
+          # A shared RPC stall restarts the roles independently; test recovery as a group.
+          livenessProbe:
+            <<: *probe
+            failureThreshold: 6
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 1Gi}
+          securityContext: *security
+          volumeMounts:
+            - {name: data, mountPath: /opt/tak/data}
+            - {name: runtime-config, mountPath: /opt/tak/runtime}
+            - &cot {name: cot, mountPath: /identities/cot, readOnly: true}
+            - &https {name: https, mountPath: /identities/https, readOnly: true}
+            - &clientTrust {name: client-trust, mountPath: /identities/client-trust, readOnly: true}
+            - &probeIdentity {name: probe, mountPath: /probe, readOnly: true}
+            - &outbound {name: outbound, mountPath: /ca_public, readOnly: true}
+        - <<: *role
+          name: messaging
+          args: [/opt/scripts/start-tak.sh, messaging]
+          readinessProbe:
+            <<: *probe
+            exec:
+              command: [/usr/bin/python3, /opt/scripts/healthcheck.py, messaging]
+          resources:
+            requests: {cpu: 200m, memory: 512Mi}
+            limits: {memory: 2Gi}
+          volumeMounts:
+            - {name: data, mountPath: /opt/tak/data}
+            - {name: runtime-messaging, mountPath: /opt/tak/runtime}
+            - *cot
+            - *https
+            - *clientTrust
+            - *probeIdentity
+            - *outbound
+        - <<: *role
+          name: api
+          args: [/opt/scripts/start-tak.sh, api]
+          readinessProbe:
+            <<: *probe
+            exec:
+              command: [/usr/bin/python3, /opt/scripts/healthcheck.py, api]
+          resources:
+            requests: {cpu: 200m, memory: 512Mi}
+            limits: {memory: 2Gi}
+          volumeMounts:
+            - {name: data, mountPath: /opt/tak/data}
+            - {name: runtime-api, mountPath: /opt/tak/runtime}
+            - *cot
+            - *https
+            - *clientTrust
+            - *probeIdentity
+            - *outbound
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: tak-data}
+        - {name: runtime-config, emptyDir: {}}
+        - {name: runtime-messaging, emptyDir: {}}
+        - {name: runtime-api, emptyDir: {}}
+        - name: cot
+          secret:
+            secretName: tak-cot-identity
+            defaultMode: 384
+            items: [{key: keystore.jks, path: keystore.jks}]
+        - name: https
+          secret:
+            secretName: tak-https-identity
+            defaultMode: 384
+            items: [{key: keystore.jks, path: keystore.jks}]
+        - name: client-trust
+          secret:
+            secretName: tak-client-trust
+            defaultMode: 384
+            items: [{key: truststore.jks, path: truststore.jks}]
+        - name: federation
+          secret:
+            secretName: tak-federation-bootstrap
+            defaultMode: 384
+            items: [{key: truststore.jks, path: truststore.jks}]
+        - name: probe
+          secret: {secretName: tak-probe-identity, defaultMode: 384}
+        - name: outbound
+          secret:
+            secretName: tak-https-identity
+            items: [{key: ca.crt, path: root_ca.pem}]
+            defaultMode: 384

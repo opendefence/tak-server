@@ -119,7 +119,12 @@ The persistent owner's [unsafe publication](../bugreports/004-unsafe-xml-publica
 The save guard also remains independent of file isolation; trace writes in an isolated-file reproduction to exclude an additional race.
 
 Real admin saves and full Pod replacement passed with the private-file fixture.
-T2 must implement this adapter behavior and isolate file-auth storage by role.
-Then change a managed input, replace the server Pod, and verify both values survive in the saved file and the admin API.
-Verify follower upgrades cannot overwrite that state. Test interrupted owner saves separately.
+T2 packages this adapter and isolates API file-auth from the persistent messaging authority.
+The external server launcher selects the actual role CoreConfig path before TAK starts.
+The vendor copy routine replaces backup symlinks, so a root backup link alone cannot persist the Java backup.
+Actual owner-path selection places that backup beside the PVC authority.
+TAK cluster mode is rejected because it redirects the authority to another path.
+The native candidate preserved an admin edit through a managed database endpoint change and Pod replacement.
+API file-auth and its backup were private; the owner's Java backup was persistent. All inspected files had mode `0600`.
+See [T2 evidence](t2-native-layout.md). Follower upgrades and interrupted owner saves still need separate tests.
 The [T1 follow-up](t1-single-pod-findings.md) records the selected architecture and release limits.

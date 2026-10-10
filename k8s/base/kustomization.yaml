@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+generatorOptions:
+  labels:
+    app.kubernetes.io/name: tak-server
+resources:
+  - statefulset.yaml
+  - services.yaml
+  - storage.yaml
+  - networkpolicy.yaml
+  - bootstrap.yaml
+configMapGenerator:
+  - name: tak-settings
+    literals:
+      - TAK_AUTH_MODE=legacy
+      - TAK_SERVER_ADDRESS=tak.example.invalid
+      - TAK_IGNITE_SEEDS=tak-ignite:47500
+      - TAK_IGNITE_POOL_SIZE=2
+      - TAK_IGNITE_CACHE_INITIAL_BYTES=16777216
+      - TAK_IGNITE_CACHE_MAX_BYTES=268435456
+      - TAK_COT_KEYSTORE_FILENAME=/identities/cot/keystore.jks
+      - TAK_HTTPS_KEYSTORE_FILENAME=/identities/https/keystore.jks
+      - TAK_CLIENT_TRUSTSTORE_FILENAME=/identities/client-trust/truststore.jks
+      - POSTGRES_ADDRESS=tak-database-rw
+      - POSTGRES_DB=cot
+      - CONFIG_MAX_HEAP=128
+      - MESSAGING_MAX_HEAP=512
+      - API_MAX_HEAP=512
+      - JAVA_TOOL_OPTIONS=-XX:ActiveProcessorCount=2

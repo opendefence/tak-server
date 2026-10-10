@@ -98,9 +98,10 @@ docker compose -p tak exec takserver_api /bin/bash -c \
 over that path replace the baked-in plugins without a rebuild.
 
 ## Common Agent Pitfalls
-1. **Certificate changes require a volume wipe.** If you change `TAKSERVER_CERT_PASS` or
-   `TAK_CA_PASS`, you MUST delete the TAK volumes (`down -v`) before restarting. The old
-   JKS files in the volume will conflict with new passwords.
+1. **Preserve native Kubernetes identity and data state.** See `k8s/README.md` for the
+   candidate base. Rotate matching identity/password Secrets together and replace the
+   server Pod. Never delete its PVC to renew certificates. The older Compose setup
+   requires explicit regeneration when passwords change; a volume wipe destroys state.
 2. **Never run `rmlocal` and `rmdev` simultaneously** — this is the general compose rule,
    but TAK is especially sensitive because it binds well-known ports (8089, 8443) that
    conflict immediately.
@@ -111,8 +112,9 @@ over that path replace the baked-in plugins without a rebuild.
    XML persistence fixes. Preserve vendor artifacts and verify each injection per release.
 4. **`takintegration` shares the `taknet` network.** If TAK is misbehaving, check `takrmapi`
    logs as well — the integration layer mediates all user certificate provisioning.
-5. **TAK cert files live in the volume, not the image.** Rebuilding the image does NOT
-   regenerate certs. Only deleting the volume triggers cert regeneration via `takinit`.
+5. **Rebuilding does not rotate identities.** Native Kubernetes identities come from
+   Secrets. Administrator federation trust stays on the PVC. The older Compose setup
+   stores its generated identities on the volume.
 
 ## Related Repos
 - https://github.com/pvarki/docker-rasenmaeher-integration (orchestration root)
