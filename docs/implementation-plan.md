@@ -17,6 +17,9 @@ The user's consolidation request brings that scope into this server workstream. 
 It is a specific exception to the older restriction on TAK application changes.
 It does not authorize the separate XML publication or file-auth error-handling patches in reports 004 and 005.
 The unmodified T1 runtime remains the packaging baseline, not the final strict-authentication image.
+The user confirmed that fresh server source will not be available.
+All server behavior changes must use external launchers or runtime injections against the vendor binaries.
+This constraint supersedes the matching-source prerequisite in the imported handoff and earlier plans.
 
 Use one Pod with separate config, messaging, and API containers. Plugin manager is optional in the same Pod.
 Keep the integration JNI/operator process in a separate Pod with its own Ignite profile.
@@ -30,7 +33,7 @@ Sibling links require the local integration checkout; the pinned commit and path
 - [x] Merge the strict policy branch without discarding the newer T1 work or rewriting either history.
 - [x] Review the policy, callers, tests, and declared limits. Rerun all 46 assertions with eight signed leaves in the pinned Java 17 ARM64 container.
 - [x] Record the current binary's approved-set failure in [report 007](../bugreports/007-unapproved-same-uuid-certificate/HANDOFF.md).
-- [x] Add the source dependencies, ownership boundaries, implementation slices, and live acceptance checks to this plan.
+- [x] Add the binary compatibility requirements, ownership boundaries, implementation slices, and live acceptance checks to this plan.
 
 The [policy README](../extensions/strict-fingerprint/README.md) contains the runnable test command.
 The consolidation run used `--pull=never`, `--network none`, a read-only source mount, and tmpfs for generated keys.
@@ -39,14 +42,19 @@ Policy tests do not establish TLS, CoT, HTTP, or session enforcement in TAK.
 
 ## Dependencies and ownership
 
-Matching TAK `5.8-RELEASE-84` application source is required before changing shipped authentication classes.
-The inspected public source at `5187abd46d827d37cfc5708805eced197a837e49` is based on 5.7.14 and is not a substitute.
-Obtain matching source and build provenance without silently changing the target release.
-Packaging work can proceed independently after the T2 model gate.
+Keep the pinned TAK `5.8-RELEASE-84` WAR and vendor JARs unchanged on disk.
+Compile external extension code against those artifacts. Record their checksums and the extension build provenance.
+Use the [plugin launcher](../bugreports/006-pluginmanager-forces-localhost/HANDOFF.md) as the starting pattern.
+First inspect the exact binary's startup, Spring, and authentication paths for replaceable components.
+Use a Java instrumentation agent only where launcher or component replacement cannot cover the required path.
+Do not assume that the plugin's private-field injection proves authentication coverage.
+Reject unsupported artifact hashes or hook signatures. Verify installation before accepting client traffic.
+Older public source can guide inspection, but the target bytecode and tests determine compatibility.
+Fresh upstream source is not a dependency. Core contracts and proof of injection coverage remain dependencies.
 
 | Owner | Responsibility |
 | --- | --- |
-| Server | Image, schema, strict admission, trusted management and authentication-evidence interfaces, runtime state, deployment base, and acceptance tests. |
+| Server | Image, external extensions and their configuration schema, strict admission, trusted management and authentication-evidence interfaces, runtime state, deployment base, and acceptance tests. |
 | Integration | Core projection and readback, separate JNI process, observer and any selected guard, client packages, grants, and UI. Consume the server base without copying it. |
 | Core | Immutable identity, effective permissions, approved credentials, purpose/generation mapping, issuance, durable activation evidence, and mapped predecessor revocation. |
 
@@ -58,7 +66,7 @@ Agree the trusted management writer, transport, freshness bound, and capability 
 ## T2 implementation slices
 
 T2 remains at its required `gpt-6.1-sol` / `high` gate. Consolidation does not confirm a model switch or start this stage.
-Implement each coherent slice in small reviewed commits. Source-dependent authentication work may proceed once its inputs exist.
+Implement each coherent slice in small reviewed commits. Test injection seams against the pinned binaries before wiring strict authentication.
 
 ### 1. Package the proven Pod and storage layout
 
@@ -89,13 +97,14 @@ T1 recovery times are observations, not an SLA. Optional roles remain unsupporte
 
 ### 4. Wire strict authentication and management
 
-- [ ] With matching source, add an explicit strict file-auth schema mode and startup validation. Invalid or unavailable strict state must deny access without falling back to legacy mode.
+- [ ] Implement an external launcher/extension for messaging and API. Use the smallest replacement that covers the inspected call paths. If instrumentation is needed, pin its class/method targets and verify classloader behavior against the selected artifacts.
+- [ ] Add an explicit strict file-auth mode in validated extension configuration. Keep new settings outside the unchanged vendor CoreConfig schema. Fail startup if required injection is absent or incompatible. Invalid or unavailable strict state must deny access without falling back to legacy mode.
 - [ ] Expose a trusted complete-set update for one UUID's approved leaf fingerprints, explicit deadline, and conditional revision. Provide immutable readback and clear conflicts, failures, and limit errors.
 - [ ] Apply and acknowledge the projection in both messaging and API JVMs. Bind permission and credential readback to the requested projection; preserve roles, groups, and the UUID account when one leaf is removed. Resolve uncertain writes by readback before retry.
 - [ ] Define the owner that invalidates approval on stale/unavailable authority and enforces its freshness bound. Missing, expired, invalidated, and restarted state must deny access.
 - [ ] Enforce after TLS chain/client-usage validation and before every role, group, cache, token, LDAP, or anonymous grant. Audit enabled certificate entry points and disable unsupported transports until tested.
 - [ ] Stop denied messaging before the first CoT is routed. Cover protected HTTP, cached principals, existing connections, tokens, and resumed TLS sessions. Define and measure the revocation bound.
-- [ ] Build and version the schema, management capability, implementation, WAR, and `UserManager.jar` together. Expose capability data so integration rejects incompatible artifacts.
+- [ ] Package and version the external extension, its configuration schema, and management capability with the unchanged WAR and `UserManager.jar`. Add a companion management JAR only if the new interface needs one. Expose the active strict mode, extension version, and vendor artifact identifiers so integration rejects incompatible or inactive enforcement.
 
 Reuse `StrictFingerprintPolicy`. Its state is private to one JVM and is empty after restart.
 Its random revisions are neither Core generations nor durable activation events.
@@ -106,7 +115,7 @@ Keep the optional disconnect guard decision open. A post-authentication guard ca
 
 ### 5. Provide completed-authentication evidence
 
-- [ ] Inspect existing APIs for a completed-authentication signal. If none suffices, add the smallest supported signal/query as part of strict authentication.
+- [ ] Inspect existing APIs for a completed-authentication signal. If none suffices, expose the smallest signal/query through the external strict-authentication extension.
 - [ ] Bind positive evidence to the exact connection, UUID, leaf SHA-256, applied approval revision, and observation time. Provide an authenticated current-state recovery query for missed notifications.
 - [ ] Support activation without requiring CoT or an HTTP application transaction. Test short-lived connections, stale/revoked/superseded observations, restart, reconnect, and resumption.
 
@@ -133,10 +142,11 @@ Client preferences and a `client-update-required` outcome belong to integration.
 
 T3 uses `gpt-6-astra` / `high`; T4 uses `gpt-6.1-sol` / `high`.
 Escalate unexplained runtime/design behavior through T1 `gpt-6-astra` / `xhigh` with a reproduction.
-Use the final image, base, schema, and management JAR together. Preserve sanitized inputs, checksums, assertions, outcomes, and limits.
+Use the final image, base, external extension/configuration, and vendor/management JAR tuple together. Preserve sanitized inputs, checksums, assertions, outcomes, and limits.
 
 | Area | Required evidence |
 | --- | --- |
+| Injection compatibility | Both JVMs install the required hooks before client admission. Missing extension, wrong artifact hash, changed hook signature, and classloader/injection failure prevent strict startup. Capability/readiness checks cannot report protected service when enforcement is absent. |
 | Strict admission | Approved main and TAK-only leaves for one UUID receive intended permissions. A third CA-valid same-UUID leaf receives no routed CoT or protected HTTP access. |
 | Projection and sessions | Single-leaf removal preserves the other leaf/account. Stale/concurrent/uncertain updates, authority loss, expiry, restart, new/existing/resumed sessions, caches, tokens, and enabled alternate transports obey the policy and measured revocation bound in both JVMs. |
 | Authentication evidence | Only the exact approved successor's completed authentication qualifies. Resubscription and recovery scans reject stale, unrelated, revoked, and superseded observations. |
@@ -151,13 +161,13 @@ Keep [reports 001–007](../bugreports/README.md) and their evidence limits expl
 Reports 001/002 do not require restoring separate Pods or patching locality for the selected layout.
 Report 003 needs file-auth isolation. Report 006 needs optional-role recovery checks.
 Reports 004/005 still need fault injection; no failed-durable-save/successful-HTTP case has been demonstrated.
-If packaging cannot satisfy durability, prepare the smallest concrete patch and reproduction for a separate decision.
+If packaging cannot satisfy durability, prepare the smallest external injection and reproduction for a separate decision.
 Specify symlink handling, permissions, backup ordering, and crash guarantees before seeking that decision.
 
 ## T5 review and T6 delivery
 
 T5 uses fresh `gpt-6-astra` / `high` review and Ponytail audit. Return fixes through T4 and rerun affected checks.
 T6 uses `gpt-6.1-sol` / `medium` for closure, with no new runtime changes.
-Deliver one versioned contract: image/source/build provenance and WAR/JAR checksums; schema/strict/management capability versions; reusable base/overlays; Services, Secrets, mounts, profiles, and network requirements; update/readback/observation semantics; operation/recovery bounds; renewal, upgrade, and restore procedures; supported platforms/storage/roles and acceptance limits.
+Deliver one versioned contract: image/build provenance, external extension source and checksums, and unchanged vendor WAR/JAR checksums; extension configuration/strict/management capability versions; reusable base/overlays; Services, Secrets, mounts, profiles, and network requirements; update/readback/observation semantics; operation/recovery bounds; renewal, upgrade, and restore procedures; supported platforms/storage/roles and acceptance limits.
 Integration's I0 image still carries a 5.8.69 JAR and must be repinned to this final tuple.
 Do not advertise strict authentication or production readiness before the coupled live acceptance passes.

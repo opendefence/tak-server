@@ -58,6 +58,7 @@ HTTP response files contain bodies only. Status codes and some shell observation
 Those observations are labeled separately from fields extracted from files.
 Binary inspection used `javap` and CFR `0.152`; committed reports contain paraphrases, not decompiled source.
 
-Matching source or a fixed vendor distribution is still needed for application changes.
-The public source repository returned no `5.8*` tags during T1. Other authorized source channels were not ruled out.
+The user later confirmed that fresh server source will not be available.
+The [current plan](../docs/implementation-plan.md) uses external launchers or runtime injections against the pinned vendor artifacts.
+The plugin launcher has live evidence; strict-authentication injection remains unimplemented.
 These reports do not establish behavior in another TAK release, architecture, CNI, or storage driver.

@@ -158,6 +158,8 @@ This experiment does not establish renewal activation or federation-trust preser
 ## Historical separate-Pod patch proposal
 
 This proposal preceded the user's shared-Pod decision. No application patch was authorized or made.
+Its source requirement is also superseded: the user confirmed that fresh source will not be available.
+The [current plan](implementation-plan.md) requires external injections for server behavior changes.
 Separate Pods cannot pass administrator persistence with the tested save condition.
 Enabling TAK cluster mode would change paths and writer behavior. It is not an accepted workaround.
 
@@ -165,7 +167,7 @@ For continued separate-Pod research, restore private follower CoreConfigs and is
 Repeat the admin edit with write tracing. File separation does not change the verified save guard, but it removes a possible competing writer.
 Startup writes to private files do not require an application patch.
 
-The remaining proposed application work must use matching TAK source:
+The proposal originally required matching TAK source for this application work:
 
 1. Make the configuration service the persistent CoreConfig writer independently of messaging/API address equality. Keep administrator saves synchronous with that owner.
 2. Make persistent XML publication atomic and propagate save failures from the persistent owner. Keep restrictive permissions and a persistent backup. The misplaced backup can also be corrected by mount/link layout.
@@ -176,7 +178,7 @@ The patch must be limited to the supported separate-process mode and preserve of
 Rerun the reproduced admin saves, startup upgrades, competing-owner checks, and interrupted saves before accepting it.
 Then finish recovery detection and the separate JNI-client tests on the resulting runtime tuple.
 
-Matching source or a vendor-fixed distribution is needed.
+At that point, matching source or a vendor-fixed distribution was considered necessary.
 The public `TAK-Product-Center/Server` repository returned no `5.8*` tags when queried.
 This does not establish whether matching source is available through another authorized channel.
 The existing source-build Dockerfile targets an older release and is not a validated 5.8 build path.

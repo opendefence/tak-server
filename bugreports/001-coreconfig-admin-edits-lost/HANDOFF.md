@@ -82,7 +82,8 @@ No watcher, hook, or forced save was installed or executed.
 
 ## Handoff
 
-For an upstream fix, obtain matching source or a fixed vendor build, then reproduce before editing.
+For an upstream fix, the vendor must reproduce this against its matching source or a fixed build.
+Fresh server source will not be available locally. Any locally adopted workaround must use external injection as specified in the [current plan](../../docs/implementation-plan.md).
 The proposed fix makes the configuration service the persistent writer independently of IP equality.
 Keep save failures visible to the caller. Isolate follower files as described in [003](../003-multiple-xml-writers/HANDOFF.md) before deciding whether startup paths need an application change. Review publication separately in [004](../004-unsafe-xml-publication/HANDOFF.md).
 Do not globally change `areTakserverIgnitesLocal()` or enable TAK cluster mode to bypass this condition.

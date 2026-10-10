@@ -46,7 +46,8 @@ The open question in this report is error propagation when a persistent write fa
 
 ## Handoff
 
-Confirm the exception path and its callers in matching source before editing.
+Confirm the exception path and its callers in the pinned bytecode before implementing any workaround.
+Fresh server source will not be available. Any locally adopted fix must use external injection as specified in the [current plan](../../docs/implementation-plan.md).
 Propagate persistence failures through the service boundary and log a credential-free error at an appropriate level.
 Define update ordering so a reported success means the authoritative file has been saved.
 Coordinate with [003](../003-multiple-xml-writers/HANDOFF.md) and [004](../004-unsafe-xml-publication/HANDOFF.md) rather than adding a second writer or whole-file watcher.

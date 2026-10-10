@@ -29,11 +29,12 @@ The user adopted strict fingerprint authentication. Policy commit `7f1e42c` is m
 Its [policy and conformance tests](../../extensions/strict-fingerprint/README.md) passed 46 assertions again during consolidation.
 TAK does not call the policy yet. The running server remains unchanged and still lacks the required enforcement.
 
-Follow the [consolidated plan](../../docs/implementation-plan.md) for matching source, explicit strict mode, trusted complete-set management, both JVM projections, admission checks, sessions, and completed-authentication evidence.
+Fresh server source will not be available. Follow the [consolidated plan](../../docs/implementation-plan.md) for external injection against pinned binaries, explicit strict mode, trusted complete-set management, both JVM projections, admission checks, sessions, and completed-authentication evidence.
 Do not store a fingerprint list in the old scalar field, alternate registrations, or remove the whole account to revoke one leaf.
 This authentication adoption does not authorize unrelated XML persistence patches.
 
 Acceptance requires two approved same-UUID leaves to work, a third unapproved leaf to receive no routed CoT or protected HTTP access, and independent single-leaf revocation without losing account permissions.
 Also test stale/expired/unavailable/restarted state, concurrent updates, readback in both JVMs, existing and resumed sessions, caches/tokens, and the documented revocation bound.
-Repeat with one final image/schema/WAR/management-JAR tuple and the actual integration client.
+Repeat with one final image/extension/configuration/vendor-JAR/management tuple and the actual integration client.
+Missing or incompatible injection must prevent strict startup in both JVMs.
 No external report was submitted. No live enforcement or production-readiness claim is made.

@@ -58,21 +58,22 @@ The policy now checks the RDN's attribute count before accepting its CN.
 
 ## Required server wiring
 
-Use matching TAK 5.8.84 source before changing the shipped classes.
-The public source checkout at `5187abd46d827d37cfc5708805eced197a837e49` merges `upstream/5.7-RELEASE-14`.
-The tag query returned no `5.8*` tags on 2026-10-10.
-The [public source](https://github.com/TAK-Product-Center/Server/tree/5187abd46d827d37cfc5708805eced197a837e49) is an inspection reference, not a matching 5.8.84 source bundle.
+Fresh server source will not be available. Keep the pinned TAK 5.8.84 vendor artifacts unchanged on disk.
+Compile an external extension against those binaries, following the [plugin launcher pattern](../../bugreports/006-pluginmanager-forces-localhost/HANDOFF.md).
+Inspect the exact call paths before choosing launcher/component replacement or, if needed, a Java instrumentation agent.
+The plugin workaround proves its own startup path, not authentication coverage.
+Older public source is an inspection aid only. Compatibility depends on the target bytecode and tests.
 
 Complete these changes together:
 
-1. Add the explicit strict-mode schema and validated startup configuration. Preserve legacy mode separately.
+1. Add validated strict-mode extension configuration outside the vendor CoreConfig schema. Install and verify hooks before client admission in both JVMs. Missing or incompatible injection must stop strict startup. Preserve legacy mode only when explicitly selected.
 2. Bind a trusted management writer to complete accepted sets, deadlines, and revision-checked updates.
 3. Distribute and acknowledge the projection in messaging and API processes. A local write does not prove either remote process applied it.
 4. Enforce the policy before token, group-cache, role, group, and anonymous grants. Cover every supported certificate authentication entry point.
 5. Make denial stop message routing and HTTP access. A caught exception followed by channel close does not prove the first CoT was blocked.
 6. Recheck cached HTTP identities and define existing/resumed-session enforcement. Keep the optional disconnect decision open.
-7. Update the management schema, interface, server artifacts, and `UserManager.jar` as one pinned runtime tuple.
-8. Repeat the actual-binary matrix and live TLS/CoT/HTTPS tests in a separate test environment.
+7. Version the extension, its configuration schema, and management capability with the unchanged WAR and `UserManager.jar`. Supply a companion management JAR only if needed. Report the active enforcement mode and artifact versions to integration.
+8. Repeat the actual-binary matrix and live TLS/CoT/HTTPS tests in a separate test environment. Include absent/incompatible injections, changed hooks, and classloader failures. Verify that these failures cannot expose an unprotected strict service.
 
 The current tests exercise this policy, not the TAK authentication entry points.
 The unmodified 5.8.84 binary still fails the approved-set requirement.
