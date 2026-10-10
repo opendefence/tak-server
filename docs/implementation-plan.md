@@ -66,7 +66,8 @@ Agree the trusted management writer, transport, freshness bound, and capability 
 ## T2 implementation slices
 
 T2 began after the user's explicit `Switched; resume T2` confirmation for `gpt-6.1-sol` / `high`.
-It is now held at T1's investigation gate for the failed CoT check. Runtime model metadata is unavailable.
+It is held while T1 investigates the failed CoT check. The user confirmed `Switched; resume T1` on 2026-10-10.
+Runtime model metadata is unavailable. Return through the T2 gate after diagnosis.
 See [native layout evidence](t2-native-layout.md).
 Implement each coherent slice in small reviewed commits. Test injection seams against the pinned binaries before wiring strict authentication.
 
@@ -97,6 +98,7 @@ T1 recovery times are observations, not an SLA. Optional roles remain unsupporte
 - [ ] Keep RSA CoT/JWT separate from HTTPS. Separate CoT client trust, federation trust, and outbound Java roots; retain administrator federation state.
 - [ ] Use cert-manager/external PKI without mounting CA signing keys in ordinary Pods. Import existing identities first and preserve fingerprints and PVCs.
 - [ ] Replace `firstrun.done` with a versioned SchemaManager Job, database-side exclusion, and separate migration credentials. Verify whether `takdb_base.sql` is required before deleting it.
+- [ ] Retire the legacy certificate generators and their consumers under the script replacement plan below. Preserve existing identities and administrator trust during adoption.
 
 ### 4. Wire strict authentication and management
 
@@ -140,6 +142,26 @@ Client preferences and a `client-update-required` outcome belong to integration.
 - [ ] Provide coordinated backup/restore for database, XML, file-auth, trust, content, and identities. Uninstall must retain data. Integration separately excludes live grants from restore.
 - [ ] Finish [CI migration](ci-migration.md): pinned actions, non-publishing PRs, `arc-runner-set`, native AMD64/ARM64 BuildKit with `/etc/buildkit/tls/{ca.crt,tls.crt,tls.key}`, and disposable Kubernetes validation of the exact candidate.
 - [ ] Keep `TAK_PUBLISH_ENABLED` unset until acceptance passes. Target `ghcr.io/opendefence/tak-server`; add no Snyk placeholder. Publication still needs separate authorization and an independent destination clone check.
+
+### 7. Retire fragile distribution scripts and legacy wrappers
+
+The user requested this cleanup on 2026-10-10. Implement it after the CoT investigation and replacement checks pass.
+Remove the six named scripts from supported workflows and image packaging. Do not replace them with renamed shell wrappers.
+
+| Retire | Current consumers | Replacement |
+| --- | --- | --- |
+| `scripts/makeCert.sh` and copied `data/certs/makeCert.sh` | `standalone_init.py`, `make_client_zip.sh`, README and AGENTS examples | Issuer-managed or supplied identities and coherent password Secrets. Use cert-manager/external PKI for standalone issuance. Import existing certificates without changing fingerprints. |
+| `scripts/delete_user.sh`, `disable_admin.sh`, `enable_admin.sh`, `enable_user.sh` | Wrapper chaining and operator examples; direct legacy `UserManager.jar certmod` calls | The trusted management interface in slice 4 for integrated projections. Use a narrow standalone bootstrap/management command against the same verified interface. Update roles and complete approval sets explicitly, with readback. Do not revoke one leaf by deleting its account or demote an administrator by deleting and recreating the user. |
+| `scripts/make_client_zip.sh` | README and AGENTS client-package instructions; `templates/missionpkg` | Keep integrated issuance/export and client packages in Core and `integration-tak`. Document standalone package creation from externally issued credentials through a verified client import workflow. Remove server-side ZIP generation and retire its templates/dependencies once no supported consumer remains. |
+| Vendor `makeRootCa.sh`, `cert-metadata.sh`, and copied certificate helper files | `standalone_init.py` copies the distribution certificate directory, edits metadata, and invokes CA generation | Replace the legacy standalone initializer with native identity inputs and the schema Job. Keep signing keys outside ordinary server Pods. Preserve existing trust and identities on adoption; do not copy executable certificate helpers into the PVC. |
+| Vendor `setenv.sh` | `run-tak.sh`, `user-manager.sh`, and the old account wrappers | Record the required options from the pinned binary tuple. Set explicit JVM, loader, profile, heap, Ignite, and TLS options in the maintained launcher. Verify server and management startup without sourcing vendor shell code. Keep vendor JAR/WAR bytes unchanged. |
+| Downloaded `wait-for-it.sh` | Dockerfile, `standalone_init.py`, `firstrun_rm.sh`, and `enable_admin.sh` | Remove with obsolete bootstrap paths. Use bounded database checks in the schema Job and non-mutating remote readiness checks for server/bootstrap dependencies. An open socket is insufficient. |
+
+- [ ] Audit direct calls, sourced files, transitive vendor helpers, image entrypoints, and copy operations against the pinned distribution. Include optional plugin/retention roles, schema tooling, tests, CI, README, AGENTS, and integration consumers. Record each remaining dependency and its replacement before removal.
+- [ ] Reuse `user_manager.py` and existing launchers only where their binary interface meets the required contract. The current `user-manager.sh` still sources `setenv.sh`; it is not the finished replacement. Strict complete-set projection needs slice 4's interface.
+- [ ] Update supported commands, fixtures, tests, image copies, environment variables, and dependencies together. Retain historical reports as evidence. Stop executing stale helper copies on existing PVCs; never wipe a PVC to remove scripts.
+- [ ] Prove fresh and repeated standalone bootstrap, identity import/renewal, user enable/disable, admin promotion/demotion, and single-leaf revocation. Verify preserved UUID, groups, other approved leaves, and administrator federation trust. Verify client package import in the owning integration workflow.
+- [ ] Require an image/caller check that supported startup, management, migration, and package workflows do not execute these scripts. Repeat binary compatibility checks for each TAK release before removing the last fallback.
 
 ## T3 acceptance and T4 fixes
 
