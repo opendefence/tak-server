@@ -1,6 +1,6 @@
 # T2 native runtime and storage
 
-T2 is active after the user's explicit `Switched; resume T2` confirmation.
+T2 began after the user's explicit `Switched; resume T2` confirmation.
 The required setting is `gpt-6.1-sol` / `high`; runtime model metadata is unavailable.
 This checkpoint packages the selected topology. It is not a strict-authentication release.
 
@@ -101,7 +101,8 @@ Both client-side TLS handshakes completed with CA and hostname verification.
 Sending distinct presence events from both clients did not make the exchange pass.
 A clean, coordinated Pod replacement reached 3/3 readiness on new IP `10.244.0.44` with zero restarts, but the same exchange still timed out.
 RPC readiness therefore does not establish successful CoT delivery in this candidate.
-No cause is established. This may be a packaging regression or upstream runtime behavior; do not label it an upstream TAK bug yet.
+The cause was unknown at this checkpoint. The [T1 follow-up](t1-cot-cache-findings.md) isolates the native base's 64 MiB Ignite cache maximum.
+The same candidate passes CoT at 256 MiB and fails again at 64 MiB. The source correction remains T2 work.
 
 The persistent file-auth still contained `admin`, `client-a`, and `client-b` with their existing `__ANON__` groups.
 The saved authentication flags matched the pre-change archive: `x509groups=true`, `x509addAnonymous=false`.
@@ -125,7 +126,8 @@ The private keys are fixture inputs, not committed test data.
 Saved failure: `outputs/t2/fresh-pod-cot-check.log`; earlier failures and RPC recovery output are also under `outputs/t2/`.
 
 The supplied handoff requires escalation of new unresolved runtime/design behavior through T1 `gpt-6-astra` / `xhigh`.
-T2 is held at that gate. Preserve the uncommitted runtime/base work until this regression is understood.
+The user confirmed that escalation. T1 identified the cache-size regression; T2 now requires its return model gate.
+Preserve the uncommitted runtime/base work for the source correction.
 Do not promote the image or mark the native runtime slice complete from RPC readiness alone.
 
 Owned scope: Kind `tak-server-t0`, context `kind-tak-server-t0`, namespace `tak-server-t1`.
@@ -136,7 +138,8 @@ The private pre-change data archive has mode `0600`. Raw XML, credentials, ident
 
 ## Remaining acceptance
 
-CoT delivery is a known failed check. Strict admission, trusted projection/readback, session enforcement, and completed-authentication evidence are not wired into TAK.
+CoT delivery fails with the source base's 64 MiB cache maximum. The T1 control at 256 MiB passes; native-base acceptance must include the source fix.
+Strict admission, trusted projection/readback, session enforcement, and completed-authentication evidence are not wired into TAK.
 Strict startup fails before touching persistent storage. The base selects legacy mode explicitly.
 Direct configuration-service RPC health, observer restoration, plugin callbacks, schema concurrency/upgrade, renewal, restore, offline operation, production CNI enforcement, movable storage, and AMD64 remain unverified.
 Mission/content/audit write-path inventory and removal of the old Compose/RM paths remain planned.

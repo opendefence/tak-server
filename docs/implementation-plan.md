@@ -66,14 +66,16 @@ Agree the trusted management writer, transport, freshness bound, and capability 
 ## T2 implementation slices
 
 T2 began after the user's explicit `Switched; resume T2` confirmation for `gpt-6.1-sol` / `high`.
-It is held while T1 investigates the failed CoT check. The user confirmed `Switched; resume T1` on 2026-10-10.
-Runtime model metadata is unavailable. Return through the T2 gate after diagnosis.
+The user confirmed `Switched; resume T1` on 2026-10-10 for the CoT investigation.
+The [T1 follow-up](t1-cot-cache-findings.md) isolates the native base's reduced Ignite cache maximum.
+Runtime model metadata is unavailable. T2 is held at its return model gate before the source correction.
 See [native layout evidence](t2-native-layout.md).
 Implement each coherent slice in small reviewed commits. Test injection seams against the pinned binaries before wiring strict authentication.
 
 ### 1. Package the proven Pod and storage layout
 
 - [ ] Create one versioned Kustomize base and standalone/integrated overlays using ordinary OCI builds, Java 17, and the actual Python 3.12 runtime.
+- [ ] Correct the 64 MiB Ignite cache maximum to the tested 256 MiB value. Recheck CoT from the rendered native base, then remove the experimental live override. Verify resource budgets separately under the intended load.
 - [x] Package the experimental adapter in the image. Use one configuration owner, non-overlapping replacement, and the lifetime lock; a singleton StatefulSet is suitable.
 - [x] Preserve `/opt/tak/data/CoreConfig_config.xml` and config-container compatibility links. Retain `coreconfig.py` ownership merge, XSD validation, restrictive modes, backup, and atomic startup publication.
 - [x] Seed private follower files from the validated authority. Keep ConfigMaps/Secrets as inputs and administrator-owned peers, groups, policy, listeners, and federation trust on persistent storage.
