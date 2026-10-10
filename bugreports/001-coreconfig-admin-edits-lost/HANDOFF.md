@@ -31,11 +31,25 @@ Separate Pod IPs make the test false once both roles are present.
 `CoreConfigFacade` delegates administrator mutations to this service, leaving edits in memory/cache without publishing the file.
 The compatibility symlink was correct, and the canonical file existed with mode `0600`.
 
+## Write-race assessment
+
+The T1 test used one shared CoreConfig file. A competing writer could therefore restore old contents.
+Before/after checksums alone cannot distinguish that race from a skipped save. No process-level write trace was captured.
+However, direct `javap` inspection confirms that the save guard bypasses `JAXBUtils` when cluster mode and the locality test are false.
+This mechanism does not depend on shared files or concurrent writes. Private follower files do not change the guard.
+The locality helper also returns true when the API address set is empty.
+Thus startup topology can change save eligibility before and after API joins, independently of filesystem races.
+
+Repeat the edit with private follower CoreConfigs and trace the persistent owner's writes before changing TAK.
+Keep the roles running with stable, distinct addresses during the edit.
+Capture the save branch and file activity to distinguish no save from a save followed by an overwrite.
+The guard is verified by bytecode; an additional race in the original run remains unexcluded.
+
 ## Handoff
 
 Obtain matching source or a fixed vendor build, then reproduce before editing.
 The proposed fix makes the configuration service the persistent writer independently of IP equality.
-Keep save failures visible to the caller. Cover startup writers from [003](../003-multiple-xml-writers/HANDOFF.md) and publication from [004](../004-unsafe-xml-publication/HANDOFF.md).
+Keep save failures visible to the caller. Isolate follower files as described in [003](../003-multiple-xml-writers/HANDOFF.md) before deciding whether startup paths need an application change. Review publication separately in [004](../004-unsafe-xml-publication/HANDOFF.md).
 Do not globally change `areTakserverIgnitesLocal()` or enable TAK cluster mode to bypass this condition.
 The source patch decision remains open.
 

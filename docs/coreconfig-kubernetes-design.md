@@ -3,6 +3,8 @@
 Keep the live `CoreConfig.xml` as persistent application state on a PVC.
 Use ConfigMaps and Secrets for deployment inputs.
 Reuse `scripts/coreconfig.py` to merge those inputs into the saved state before the configuration service starts.
+Only the config service uses the persistent CoreConfig as its local file.
+Other roles use private, writable bootstrap copies and receive runtime configuration through Ignite.
 No new operator or synchronization sidecar is needed.
 
 This records the T1 storage decision. It does not resolve the TAK Java persistence defects or complete T1.
@@ -15,6 +17,7 @@ This records the T1 storage decision. It does not resolve the TAK Java persisten
 | Database credentials and identity passwords | Deployment | Secret inputs |
 | Initial XML structure and defaults | Image | Existing `CoreConfig.tpl` |
 | Saved XML, including administrator changes | Configuration service | PVC |
+| Follower CoreConfig bootstrap copies | Each follower | Private runtime storage |
 | File-auth records and administrator-managed federation trust | Application | Persistent storage |
 
 The exact deployment-owned XML attributes are listed in `coreconfig.MANAGED`.
@@ -30,15 +33,20 @@ See the [ConfigMap documentation](https://kubernetes.io/docs/concepts/configurat
 
 ## Startup and updates
 
-1. Mount the PVC directory at `/opt/tak/data`.
+1. Mount the PVC directory at `/opt/tak/data` in the config Pod.
 2. Keep `/opt/tak/data/CoreConfig_config.xml` as the canonical saved file.
-3. Keep `/opt/tak/CoreConfig.xml` and `/opt/tak/data/CoreConfig.xml` as compatibility links to it.
+3. In that Pod, keep `/opt/tak/CoreConfig.xml` and `/opt/tak/data/CoreConfig.xml` as compatibility links to it.
 4. Let the config startup wrapper acquire the existing exclusive lock.
 5. Render a temporary template from ConfigMap and Secret inputs.
 6. Merge the managed attributes into the saved XML. Seed from the template only when no saved or legacy file exists.
 7. Validate the result with the release's XSD. Preserve the saved file when parsing, merging, or validation fails.
 8. Save the existing file as a pre-merge backup before publishing a changed result.
 9. Start the configuration JVM and keep the lock for its lifetime.
+
+Followers must link their `/opt/tak/CoreConfig.xml` to a private file instead of the persistent authority.
+They may write defaults or upgrades to that private file.
+Verify which fields they read locally before replacing saved-state bootstrap input with a fresh template.
+Their runtime use of administrator settings through Ignite does not require sharing the on-disk authority.
 
 Mount the containing directory so the merger can create temporary files, replace the canonical file, and retain backups together.
 Do not mount a ConfigMap over either XML path.
@@ -62,9 +70,11 @@ See the [Kustomize generator documentation](https://kubernetes.io/docs/tasks/man
 Run one configuration-service replica.
 The wrapper lock prevents competing wrappers from merging the same state.
 It does not stop Java code that writes without acquiring that lock.
-All runtime saves must reach the configuration-service owner before this model is accepted.
+All administrator CoreConfig saves must reach the configuration-service owner before this model is accepted.
+Use private follower files to isolate their local startup writes.
 
-Retain the current shared RWO PVC and same-node placement for the T1 baseline.
+The recorded T1 baseline used a shared RWO PVC and same-node placement.
+That experiment linked every role to the same CoreConfig; it did not validate the private-file design.
 RWO allows several Pods on one node; it does not enforce one writer.
 Do not switch this shared claim to `ReadWriteOncePod`: that mode permits only one Pod to mount it.
 A dedicated config-only PVC could use `ReadWriteOncePod` with a supporting CSI driver after the other roles no longer need to mount it.
@@ -100,8 +110,10 @@ podman run --rm --pull=never --network none -v "$PWD:/workspace:ro" \
 
 The [lost-edit reproduction](../bugreports/001-coreconfig-admin-edits-lost/HANDOFF.md) already used a writable PVC.
 The Java address comparison suppressed the save despite a successful admin API response.
-The [additional writers](../bugreports/003-multiple-xml-writers/HANDOFF.md) and [unsafe publication](../bugreports/004-unsafe-xml-publication/HANDOFF.md) also remain unresolved.
-Moving the file to another Kubernetes resource cannot repair those application paths.
+The [additional-writer report](../bugreports/003-multiple-xml-writers/HANDOFF.md) is reclassified as a shared-file deployment risk.
+Restore private follower paths before requiring an application change for those startup writes.
+The persistent owner's [unsafe publication](../bugreports/004-unsafe-xml-publication/HANDOFF.md) remains a separate concern.
+The save guard also remains independent of file isolation; trace writes in an isolated-file reproduction to exclude an additional race.
 
 After the application persistence decision, verify a real admin edit reaches the canonical file.
 Then change a managed input, replace the config Pod, and verify both values survive in the saved file and the admin API.

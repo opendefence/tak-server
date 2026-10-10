@@ -1,6 +1,6 @@
 # T1 runtime findings
 
-T1 is incomplete. A TAK application change needs approval before work continues.
+T1 is incomplete. A TAK application change still needs approval. Adapter file isolation can be tested independently.
 The user confirmed `gpt-6-astra` / `xhigh` with `Switched; resume T1`.
 This is user confirmation, not runtime metadata verification.
 All observations below are from 2026-10-10.
@@ -64,6 +64,9 @@ The compatibility link `/opt/tak/CoreConfig.xml` resolved to the canonical PVC f
 `/opt/tak/conf/CoreConfig.xml` did not exist in this test.
 The canonical XML had mode `0600`.
 The loss is therefore not explained by a broken compatibility link.
+Direct bytecode review confirms that the guard bypasses the save call when cluster mode and the locality condition are false.
+The before/after hashes do not exclude an additional overwrite race in the shared-file experiment.
+Repeat with private follower files and process-level write traces before finalizing the patch scope. See [001](../bugreports/001-coreconfig-admin-edits-lost/HANDOFF.md).
 
 ## Actual Java writers
 
@@ -89,6 +92,13 @@ The auth file and its backup had mode `0644`; this must be tightened for credent
 The experiment does not establish safety under concurrent writers or interruption during a save.
 Persistent XML, file-auth, and federation trust must remain authoritative state.
 Other application content paths still need the full inventory required by the handoff.
+
+Historical review found that commit `d7682ca` replaced per-role CoreConfig paths with the shared authority.
+Follower startup writes are not an upstream ownership defect when they target private files.
+Report [003](../bugreports/003-multiple-xml-writers/HANDOFF.md) is reclassified as a deployment-specific risk.
+Only the config-service CoreConfig needs persistence; followers need private bootstrap files and runtime configuration from Ignite.
+Validate direct local reads before discarding any bootstrap values.
+File-auth storage must be isolated separately because its path comes from remote CoreConfig.
 
 ## Messaging replacement and recovery
 
@@ -149,12 +159,15 @@ The handoff requires a pause when essential behavior needs an unapproved TAK pat
 Separate Pods cannot pass administrator persistence with the tested save condition.
 Enabling TAK cluster mode would change paths and writer behavior. It is not an accepted workaround.
 
-The smallest proposed application change is a focused patch built from matching TAK source:
+First restore private follower CoreConfigs in the adapter experiment and isolate file-auth storage by role.
+Repeat the admin edit with write tracing. File separation does not change the verified save guard, but it removes a possible competing writer.
+Startup writes to private files do not require an application patch.
+
+The remaining proposed application work must use matching TAK source:
 
 1. Make the configuration service the persistent CoreConfig writer independently of messaging/API address equality. Keep administrator saves synchronous with that owner.
-2. Restrict startup defaults and upgrade writes to that owner. Make follower startup read the prepared authority without publishing another copy.
-3. Make messaging the persistent file-auth writer. Keep API authentication state in memory or a private runtime copy, without writing the shared authority during startup.
-4. Resolve the canonical target before atomic XML publication. Keep restrictive permissions and a persistent backup. Return save failures to the caller.
+2. Make persistent XML publication atomic and propagate save failures from the persistent owner. Keep restrictive permissions and a persistent backup. The misplaced backup can also be corrected by mount/link layout.
+3. Change startup or file-auth ownership in TAK only if role-specific file storage cannot enforce the required separation. Messaging owns persistent file-auth; API may write its private copy.
 
 Do not globally change `areTakserverIgnitesLocal()`, enable cluster mode, or add a whole-file synchronization watcher.
 The patch must be limited to the supported separate-process mode and preserve offline tool behavior.

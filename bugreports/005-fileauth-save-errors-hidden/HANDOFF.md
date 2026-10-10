@@ -15,6 +15,14 @@ Expected: callers can distinguish a durable update from a failed save, and an op
 Actual inspection: the persistent write can fail after the control update, with its exception suppressed.
 The ordinary T1 user-registration and restart tests succeeded. They did not exercise this failure path or prove a successful HTTP response after a failed save.
 
+## Effect of private role files
+
+This finding concerns `UserAuthenticationFile.xml`, not CoreConfig persistence.
+Private CoreConfigs do not change the save exception handler.
+An API-local file-auth copy can fail without losing the messaging owner's persistent file; test that case separately.
+The reported durability risk concerns failure on the actual persistent file-auth owner.
+Inject the failure there before claiming an acknowledged user update is lost.
+
 ## Reproduction still needed
 
 1. Start the exact runtime with disposable file-auth state and normal logging.

@@ -1,7 +1,15 @@
 {
+  "classification": "Deployment-specific shared-file risk; not an established upstream TAK defect",
   "counter_evidence": "All three test identities survived ordinary T1 replacement/restarts. No overlap or corruption test was performed.",
   "environment": "../ENVIRONMENT.md",
   "evidence_level": "Paraphrased binary inspection; simultaneous-write loss not reproduced",
+  "historical_layout": {
+    "before_commit": "d7682ca",
+    "file": "scripts/start-tak.sh",
+    "finding": "Each role selected CoreConfig_${1}.xml. The later commit linked all roles to CoreConfig_config.xml. The old template still shared the file-auth path.",
+    "inspected_parent": "a36e91c",
+    "limit": "The inspected parent regenerated role files at startup; it does not prove preservation of administrator changes."
+  },
   "inspection_tool": "CFR 0.152, exact T1 binaries",
   "observed_on": "2026-10-10",
   "original_findings_commit": "8ec0351",
@@ -21,6 +29,7 @@
   ],
   "redaction": "Inspection notes are paraphrases. Decompiled source is not included.",
   "source_artifacts": [
+    "outputs/t1/decompiled/com/bbn/marti/remote/config/CoreConfigFacade.java",
     "outputs/t1/decompiled/com/bbn/marti/remote/config/LocalConfiguration.java",
     "outputs/t1/decompiled/com/bbn/marti/groups/FileAuthenticator.java"
   ],

@@ -50,6 +50,8 @@
   "original_findings_commit": "8ec0351",
   "redaction": "Only test-peer fields, the selected timing field, a success message, and filesystem observations are included. Truststore credentials and complete API exports are omitted.",
   "source_artifacts": [
+    "outputs/t1/distributed-save-bytecode.txt",
+    "outputs/t1/ignite-locality-bytecode.txt",
     "outputs/t1/edited-outgoingconnections.json",
     "outputs/t1/edited-federationconfig.json",
     "outputs/t1/before-restart-outgoingconnections.json",
@@ -60,5 +62,10 @@
     "outputs/t1/config-after.txt"
   ],
   "source_checksums": "../SOURCE-SHA256SUMS",
-  "timing_write_response": "Successfully modified Federation config"
+  "timing_write_response": "Successfully modified Federation config",
+  "write_race_assessment": {
+    "binary_check": "javap confirms the save call is bypassed when cluster mode and the address-locality condition are false. The locality helper also returns true when the API address set is empty.",
+    "limit": "Before/after hashes do not exclude an additional overwrite. No process-level write trace or private-follower control experiment was captured.",
+    "next_check": "Repeat with private follower files and stable distinct role addresses; trace the persistent owner's save branch and file writes."
+  }
 }

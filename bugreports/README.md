@@ -9,12 +9,13 @@ Keep deployment-adapter defects in the implementation work rather than attributi
 | --- | --- | --- |
 | [001](001-coreconfig-admin-edits-lost/HANDOFF.md) | Administrator edits are not saved with separate role IPs | Reproduced through the admin API and restart |
 | [002](002-ignite-reconnect-stalls/HANDOFF.md) | Messaging replacement leaves remote services unavailable | Reproduced; TAK/Ignite root cause remains unresolved |
-| [003](003-multiple-xml-writers/HANDOFF.md) | Java startup paths bypass persistent-state writer ownership | Binary inspection; concurrent data loss not reproduced |
+| [003](003-multiple-xml-writers/HANDOFF.md) | Shared-file packaging exposes multiple Java writers | Reclassified as deployment-specific; private-file validation pending |
 | [004](004-unsafe-xml-publication/HANDOFF.md) | XML saves truncate the live target and misplace symlink backups | Binary inspection and live path observation; crash loss not reproduced |
 | [005](005-fileauth-save-errors-hidden/HANDOFF.md) | File-auth save failures are suppressed | Binary inspection; fault injection pending |
 
 All reports concern the [recorded T1 environment](ENVIRONMENT.md), dated 2026-10-10.
-Their status is open. No report has been sent to an external tracker.
+Reports 001, 002, 004, and 005 remain open. Report 003 is retained with its corrected classification and evidence history.
+No report has been sent to an external tracker.
 Recording a proposed fix does not authorize a TAK application patch.
 The patch/source decision recorded in [implementation status](../docs/implementation-status.md) remains open.
 

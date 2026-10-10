@@ -22,6 +22,14 @@ Whether interruption causes data loss depends on timing and storage behavior; no
 Related permission observation: the live file-auth file and backup were `0644` in this image.
 This is a recorded confidentiality concern, not proof of a hard-coded TAK mode. The process umask and packaging contribution need isolation.
 
+## Effect of private role files
+
+Private follower CoreConfigs remove their writes from the persistent owner's file.
+They do not remove the truncation window when that owner saves its own authority.
+The backup location is also a packaging issue: the supplied path and its backup can both resolve to persistent storage without changing TAK.
+Do not require a canonical-path application patch solely to correct the tested mount/link layout.
+Atomic publication remains a separate application concern. No crash loss has been reproduced.
+
 ## Reproduction and handoff
 
 Use disposable files with the exact JAXB utility and a configuration object from the selected release.
