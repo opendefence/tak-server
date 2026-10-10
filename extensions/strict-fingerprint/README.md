@@ -78,3 +78,7 @@ Complete these changes together:
 The current tests exercise this policy, not the TAK authentication entry points.
 The unmodified 5.8.84 binary still fails the approved-set requirement.
 Production Core adapters also require the versioned identity, approval, freshness, and observation contracts.
+
+The [pinned hook inspection](../../docs/t2-strict-hook-inspection.md) records the
+messaging and HTTP call paths. `check-vendor-hooks.sh` rejects other WAR or
+UserManager artifacts and checks the inspected signatures; it does not enable strict mode.

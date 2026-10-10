@@ -145,6 +145,9 @@ Then test password and trust rotation, automatic issuer renewal, and the actual 
 
 ### 4. Wire strict authentication and management
 
+- [x] Inspect the pinned messaging and HTTP authentication seams and add a
+  [vendor compatibility probe](t2-strict-hook-inspection.md). It rejects other
+  artifact hashes and changed inspected signatures; it does not install hooks.
 - [ ] Implement an external launcher/extension for messaging and API. Use the smallest replacement that covers the inspected call paths. If instrumentation is needed, pin its class/method targets and verify classloader behavior against the selected artifacts.
 - [ ] Add an explicit strict file-auth mode in validated extension configuration. Keep new settings outside the unchanged vendor CoreConfig schema. Fail startup if required injection is absent or incompatible. Invalid or unavailable strict state must deny access without falling back to legacy mode.
 - [ ] Expose a trusted complete-set update for one UUID's approved leaf fingerprints, explicit deadline, and conditional revision. Provide immutable readback and clear conflicts, failures, and limit errors.
