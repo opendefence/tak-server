@@ -16,6 +16,10 @@ variables:
   - name: TAK_SERVICE_TYPE
     default: LoadBalancer
     pattern: "^(LoadBalancer|ClusterIP)$"
+  - name: LDAP_UPDATE_INTERVAL
+    description: LDAP refresh interval in seconds when LDAP authentication is configured
+    default: "60"
+    pattern: "^[1-9][0-9]*$"
   - name: TAK_IGNITE_POOL_SIZE
     default: "2"
     pattern: "^[0-9]+$"
