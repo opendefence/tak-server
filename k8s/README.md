@@ -146,6 +146,8 @@ Java XML publication still has the truncation risk described in reports 004 and 
 
 Coordinate changes to identity files and matching password Secrets. Replace the whole server Pod after the generation is ready.
 Verify the served certificate and authenticated traffic after replacement. Live reload and certificate renewal acceptance are unfinished.
+An isolated [T2 check](../docs/t2-standalone-renewal.md) renewed HTTPS with an unchanged password and CA through a coordinated Pod replacement.
+It did not test automatic issuer renewal or a password change.
 Back up database, XML, file-auth, trust, content, and identities together before upgrade or restore.
 The base retains the existing data layout; mission/content/audit path inventory remains unfinished.
 

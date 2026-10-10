@@ -113,6 +113,9 @@ The repository's seeded legacy dump required exact V7/V9 checksum reconciliation
 The disposable upgraded schema matched a fresh install. Seeded roles and three added CoT, mission, and user rows survived.
 An interrupted disposable Job stopped at blocked V98; a new Job applied V98–V106 and matched the fresh schema.
 Test a full production-like data set, reviewed adoption, and other failure points before closing this item.
+An [isolated fresh install and HTTPS renewal](t2-standalone-renewal.md) passed with supplied JKS stores and an unchanged password.
+First startup exposed an API/message-service race; fix that ordering or make the failed API JVM exit promptly.
+Then test password and trust rotation, automatic issuer renewal, and the actual standalone overlay.
 
 ### 4. Wire strict authentication and management
 
