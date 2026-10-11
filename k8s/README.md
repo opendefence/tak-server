@@ -69,6 +69,12 @@ The Job mounts only its public certificate. Application containers mount its cli
 Ordinary Pods do not mount issuer CA signing keys.
 
 The client and federation truststores use `trust-password`. Preserve that password while retaining an existing federation store.
+On first start, the volume init container validates `tak-federation-bootstrap/truststore.jks`.
+It seeds `/opt/tak/data/certs/files/fed-truststore.jks` only when that file is absent.
+The server roles link `/opt/tak/certs` to `/opt/tak/data/certs` on the `tak-data` PVC.
+Administrators can configure federation through the web UI at `https://TAK_SERVER_ADDRESS:8443/Marti`.
+Federation trust changes use this writable, persistent store.
+Later Pod starts validate the saved store and preserve its contents.
 An unrelated client trust root must not replace administrator-managed federation trust.
 Keep CoT and HTTPS identities separate. Do not widen client trust with public Java roots.
 

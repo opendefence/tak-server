@@ -66,7 +66,25 @@ class InitializeVolumeTest(unittest.TestCase):
             root = work / "tak"
             initialize_volume.initialize(root, seed)
             saved = root / "data/certs/files/fed-truststore.jks"
+            initial = saved.read_bytes()
+            # The federation UI rewrites this store when an administrator adds trust.
+            run(
+                [
+                    "keytool",
+                    "-importcert",
+                    "-noprompt",
+                    "-keystore",
+                    str(saved),
+                    "-storepass:env",
+                    "CA_PASS",
+                    "-alias",
+                    "administrator-added-peer",
+                    "-file",
+                    str(certificate),
+                ]
+            )
             original = saved.read_bytes()
+            self.assertNotEqual(original, initial)
             self.assertEqual(saved.stat().st_mode & 0o777, 0o600)
             seed.write_bytes(b"invalid bootstrap")
             initialize_volume.initialize(root, seed)
