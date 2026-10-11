@@ -97,9 +97,11 @@ jobs:
       - name: Show native workload status on failure
         if: failure()
         run: |
+          export KUBECONFIG="$PWD/outputs/local/kubeconfig"
           mise exec -- task --yes status
           kubectl --context kind-tak-server-local -n tak-server describe job/tak-schema-5-8-92 || true
           for pod in $(kubectl --context kind-tak-server-local -n tak-server get pods -l batch.kubernetes.io/job-name=tak-schema-5-8-92 -o name); do
+            kubectl --context kind-tak-server-local -n tak-server describe "$pod" || true
             kubectl --context kind-tak-server-local -n tak-server logs "$pod" -c schema || true
           done
       - name: Clean up disposable cluster
