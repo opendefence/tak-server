@@ -33,9 +33,14 @@ jobs:
 
 
   native_validations:
+    needs: [checks, publish_pr_image]
+    if: >-
+      !cancelled() && needs.checks.result == 'success' &&
+      (needs.publish_pr_image.result == 'success' || needs.publish_pr_image.result == 'skipped')
     runs-on: arc-runner-set
     permissions:
       contents: read
+      packages: read
       pull-requests: write
       checks: write
     steps:
@@ -47,9 +52,25 @@ jobs:
           fetch-depth: 0
           lfs: true
       - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
-      - name: Build candidate image
+      - name: Log in to GHCR
+        if: needs.publish_pr_image.result == 'success'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull published candidate
+        if: needs.publish_pr_image.result == 'success'
+        env:
+          TAK_PUBLISHED_IMAGE: ${{ needs.publish_pr_image.outputs.tak-image }}
         run: |
-          docker buildx build --load --build-arg TAK_RELEASE="$TAK_RELEASE" -t localhost/tak-server:local .
+          docker pull "$TAK_PUBLISHED_IMAGE"
+          docker image tag "$TAK_PUBLISHED_IMAGE" localhost/tak-server:local
+      - name: Build candidate image
+        if: needs.publish_pr_image.result == 'skipped'
+        run: docker buildx build --load --build-arg TAK_RELEASE="$TAK_RELEASE" -t localhost/tak-server:local .
+      - name: Record candidate image
+        run: |
           tak_image_id=$(docker image inspect --format '{{.Id}}' localhost/tak-server:local)
           echo "TAK_TEST_IMAGE=$tak_image_id" >> "$GITHUB_ENV"
       - name: Test configuration and launchers
@@ -90,8 +111,12 @@ jobs:
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor != 'dependabot[bot]'
-    needs: [checks, native_validations]
+    needs: [checks]
     runs-on: arc-runner-set
+    env:
+      PR_IMAGE_TAG: pr-${{ github.event.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+    outputs:
+      tak-image: ${{ steps.image.outputs.ref }}
     permissions:
       contents: read
       packages: write
@@ -103,12 +128,22 @@ jobs:
           submodules: recursive
           lfs: true
       - name: Publish PR image
+        id: publish
         uses: pvarki/config-ci-library/.github/actions/publish-image@1786399bf62c2b691f1e8fb9dcfc7a0be72a2846
         with:
           product: tak
           component: server
           target: run
           platforms: linux/amd64,linux/arm64
+          extra-tag: ${{ env.PR_IMAGE_TAG }}
           build-args: |
             TAK_RELEASE=${{ env.TAK_RELEASE }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve published image
+        id: image
+        env:
+          IMAGE: ghcr.io/${{ steps.publish.outputs.image-name }}
+        run: |
+          digest=$(docker buildx imagetools inspect "$IMAGE:$PR_IMAGE_TAG" --format '{{.Manifest.Digest}}')
+          [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          echo "ref=$IMAGE@$digest" >> "$GITHUB_OUTPUT"

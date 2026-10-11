@@ -22,6 +22,55 @@ class WorkflowReleaseTest(unittest.TestCase):
             releases.append(matches[0])
         self.assertEqual(releases[0], releases[1])
 
+    def test_kind_reuses_tested_image(self) -> None:
+        taskfile = (Path(__file__).resolve().parents[1] / "Taskfile.yaml").read_text()
+        task = taskfile.split("  image:\n", 1)[1].split("  tak:\n", 1)[0]
+        script = textwrap.dedent(
+            task.split("      - |\n", 1)[1].split("      - kind ", 1)[0]
+        ).replace("{{.TAK_IMAGE | shellQuote}}", "localhost/tak-server:local")
+        stub = r"""
+        docker() {
+          printf '%s\n' "$*" >> "$COMMAND_LOG"
+          if [ "$1 $2" = 'image tag' ]; then
+            [ "$3" = "$TAK_TEST_IMAGE" ] && [ "$MISSING_IMAGE" = 'false' ]
+          fi
+        }
+        """
+        for image, missing in (
+            ("sha256:test", "false"),
+            ("sha256:test", "true"),
+            ("", "false"),
+        ):
+            with (
+                self.subTest(image=image, missing=missing),
+                tempfile.TemporaryDirectory() as tmp,
+            ):
+                log = Path(tmp) / "commands"
+                result = subprocess.run(
+                    ["bash", "-c", textwrap.dedent(stub) + script],
+                    env={
+                        **os.environ,
+                        "TAK_TEST_IMAGE": image,
+                        "MISSING_IMAGE": missing,
+                        "COMMAND_LOG": str(log),
+                    },
+                    capture_output=True,
+                    text=True,
+                )
+                commands = log.read_text().splitlines()
+                if image:
+                    self.assertEqual(
+                        commands, [f"image tag {image} localhost/tak-server:local"]
+                    )
+                    self.assertEqual(
+                        result.returncode == 0, missing == "false", result.stderr
+                    )
+                else:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn(
+                        "buildx build --load -t localhost/tak-server:local .", commands
+                    )
+
     def test_zarf_publishing(self) -> None:
         workflow = (
             Path(__file__).resolve().parents[1] / ".github/workflows/push_to_main.yml"

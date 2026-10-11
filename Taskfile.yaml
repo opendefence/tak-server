@@ -69,10 +69,12 @@ tasks:
       - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} -n tak-server wait --for=condition=Ready certificate/tak-cot-identity certificate/tak-https-identity certificate/tak-client-trust certificate/tak-federation-bootstrap certificate/tak-probe-identity --timeout=300s
 
   image:
-    desc: Build the current TAK image and load it into the selected Kind cluster
+    desc: Build or reuse the tested TAK image and load it into the selected Kind cluster
     cmds:
       - |
-        if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1 && ! docker version 2>&1 | grep -qi podman; then
+        if [ -n "${TAK_TEST_IMAGE:-}" ]; then
+          docker image tag "$TAK_TEST_IMAGE" {{.TAK_IMAGE | shellQuote}}
+        elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1 && ! docker version 2>&1 | grep -qi podman; then
           docker buildx build --load -t {{.TAK_IMAGE | shellQuote}} .
         elif command -v podman >/dev/null 2>&1 && podman info >/dev/null 2>&1; then
           podman build -t {{.TAK_IMAGE | shellQuote}} .

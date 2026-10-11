@@ -22,6 +22,9 @@ mise exec -- task --yes smoke
 
 `up` creates `tak-server-local` and writes its kubeconfig to `outputs/local/kubeconfig`.
 It installs the OpenDefence base package and a local CA, generates retained runtime/JKS password Secrets with External Secrets Operator, starts CNPG/PostGIS, issues JKS identities with cert-manager, builds and loads the current image, then deploys the standalone Zarf components. The final smoke check requires a ready StatefulSet and HTTP 200 from an authenticated `/Marti` read.
+CI sets `TAK_TEST_IMAGE` to an existing Docker image ID. When set, `task image`
+retags and loads that exact image into Kind without rebuilding; a missing image
+fails the task. Ordinary local runs build the checkout with Docker or Podman.
 The local `task tak` restarts the whole server Pod after Zarf applies so repeated runs pick up changed ConfigMaps and a rebuilt image with the same local tag.
 The local Zarf deployment uses a ClusterIP Service because Kind has no load balancer; the normal standalone package defaults to LoadBalancer. Use `kubectl --kubeconfig outputs/local/kubeconfig -n tak-server port-forward svc/tak-server 8443:8443` for local access. The test CA and admin probe identity are for this disposable cluster only.
 `mise exec -- task --yes down` deletes that cluster, including its database and identities. It does not target other Kind clusters.
