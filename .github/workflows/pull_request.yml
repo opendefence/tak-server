@@ -14,18 +14,18 @@ jobs:
       pull-requests: write
       checks: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
           fetch-depth: 0
       - name: Prepare env file for hooks
         run: cp takserver.env.example takserver.env
       - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Check TAK release sync
         run: uv run --frozen -m unittest tests.test_workflow_release -v
       - name: Run prek
-        uses: j178/prek-action@6dd76cd3f10a318f0fb0b7743a9651fda964a551 # v2
+        uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204 # v3.0.1
         env:
           SKIP: no-commit-to-branch
       - name: Validate bumpversion
@@ -41,7 +41,7 @@ jobs:
     steps:
       - name: Install git-lfs
         run: sudo apt-get update && sudo apt-get install -y git-lfs
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
           fetch-depth: 0
@@ -75,7 +75,12 @@ jobs:
           test "$(docker image inspect --format '{{.Id}}' localhost/tak-server:local)" = "$TAK_TEST_IMAGE"
       - name: Show native workload status on failure
         if: failure()
-        run: mise exec -- task --yes status
+        run: |
+          mise exec -- task --yes status
+          kubectl --context kind-tak-server-local -n tak-server describe job/tak-schema-5-8-92 || true
+          for pod in $(kubectl --context kind-tak-server-local -n tak-server get pods -l batch.kubernetes.io/job-name=tak-schema-5-8-92 -o name); do
+            kubectl --context kind-tak-server-local -n tak-server logs "$pod" -c schema || true
+          done
       - name: Clean up disposable cluster
         if: always()
         run: mise exec -- task --yes down
