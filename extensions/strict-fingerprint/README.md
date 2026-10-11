@@ -5,6 +5,11 @@ The policy, admission agent, and local denial tests are implemented for the pinn
 Trusted projection, both-JVM readback, the authority lease owner, and complete acceptance remain open.
 Do not advertise this as a complete strict-authentication release.
 
+The `tak-operator` in `integration-tak` owns integrated strict authentication.
+Its [work list](../../../integration-tak/docs/remaining-work-handoff.md#integrated-strict-authentication-ownership) covers contracts, projection, freshness, sessions, observation, and acceptance.
+Keep this policy and its hooks here because they ship in the TAK image.
+Use the [image handoff](../../../integration-tak/docs/tak-server-change-handoff.md) only for gaps that require image changes.
+
 The user approved the integration proposal after the actual 5.8.84 component test accepted an unapproved same-UUID certificate.
 This approval supersedes the older `AGENTS.md` restriction on application changes for this specific authentication change.
 It does not authorize the separate persistence fixes in the server bug reports.
@@ -68,14 +73,15 @@ Inspect the exact call paths before choosing launcher/component replacement or, 
 The plugin workaround proves its own startup path, not authentication coverage.
 Older public source is an inspection aid only. Compatibility depends on the target bytecode and tests.
 
-Complete these changes together:
+The integration workstream coordinates the following requirements.
+Change this extension only when existing TAK interfaces cannot meet them:
 
 1. Complete validated strict-mode extension configuration outside the vendor CoreConfig schema. The pinned admission hooks now install before TAK startup; keep incompatible injection fail-closed and legacy mode explicitly selected.
 2. Bind a trusted management writer to complete accepted sets, deadlines, and revision-checked updates.
 3. Distribute and acknowledge the projection in messaging and API processes. A local write does not prove either remote process applied it.
 4. Enforce the policy before token, group-cache, role, group, and anonymous grants. Cover every supported certificate authentication entry point.
 5. Make denial stop message routing and HTTP access. A caught exception followed by channel close does not prove the first CoT was blocked.
-6. Recheck cached HTTP identities and define existing/resumed-session enforcement. Keep the optional disconnect decision open.
+6. Recheck cached HTTP identities and define existing/resumed-session enforcement. Integration owns its CoT disconnect code and must prove its limits.
 7. Version the extension, its configuration schema, and management capability with the unchanged WAR and `UserManager.jar`. Supply a companion management JAR only if needed. Report the active enforcement mode and artifact versions to integration.
 8. Repeat the actual-binary matrix and live TLS/CoT/HTTPS tests in a separate test environment. Include absent/incompatible injections, changed hooks, and classloader failures. Verify that these failures cannot expose an unprotected strict service.
 

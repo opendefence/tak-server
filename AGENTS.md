@@ -8,6 +8,9 @@ The native Kubernetes candidate runs config, messaging, and API in one singleton
 StatefulSet. Strict fingerprint authentication is still under implementation.
 Standalone uses legacy TAK certificate authentication; strict approval depends
 on OpenDefence Core User authority and applies only to integrated deployments.
+The `tak-operator` in sibling `integration-tak` owns that strict-authentication
+work. Keep only required TAK image changes and binary compatibility checks here.
+The integration's `docs/remaining-work-handoff.md` is the authoritative work list.
 
 ## Local development
 

@@ -9,12 +9,14 @@ The [checkpoint](implementation-status.md) records current progress and the next
 | Input | Pinned reference | Result |
 | --- | --- | --- |
 | Server runtime investigation | `a38531b`; [T1 follow-up](t1-single-pod-findings.md) | Shared server Pod, persistent authority, private follower files, native JKS, and basic recovery verified. |
-| Strict fingerprint branch | `7f1e42c1112753cfa323d77182767ccbab1dc3eb`, merged by `fc07196` | Independent Java policy and tests imported without changes. No TAK entry point calls it. |
+| Strict fingerprint branch | `7f1e42c1112753cfa323d77182767ccbab1dc3eb`, merged by `fc07196` | Initial independent Java policy and tests imported without changes. The current pinned image also has admission hooks. |
 | Integration handoff | `integration-tak` commit `d9164a4141dd0064b18250cfac0b07b862284d2e`, `docs/tak-server-change-handoff.md` | Authentication, observation, capability, and final acceptance requirements incorporated below. |
 
 The [integration handoff](../../integration-tak/docs/tak-server-change-handoff.md) records adoption of the strict fingerprint change.
-The user's consolidation request brings that scope into this server workstream. Do not request adoption again.
-It is a specific exception to the older restriction on TAK application changes.
+The user's 2026-10-11 decision assigns integrated strict authentication to the `tak-operator` in `integration-tak`.
+Its [remaining work list](../../integration-tak/docs/remaining-work-handoff.md#integrated-strict-authentication-ownership) owns contracts, projection, freshness, sessions, observation, and coupled acceptance.
+Only required image changes remain in this workstream. This supersedes the earlier broad server assignment.
+The adopted external extension remains authorized. Do not request adoption again.
 It does not authorize the separate XML publication or file-auth error-handling patches in reports 004 and 005.
 The unmodified T1 runtime remains the packaging baseline, not the final strict-authentication image.
 The user confirmed that fresh server source will not be available.
@@ -56,39 +58,29 @@ Fresh upstream source is not a dependency. Core contracts and proof of injection
 
 | Owner | Responsibility |
 | --- | --- |
-| Server | Image, external extensions and their configuration schema, strict admission, trusted management and authentication-evidence interfaces, runtime state, deployment base, and acceptance tests. |
-| Integration | Core projection and readback, separate JNI process, observer and any selected guard, client packages, grants, and UI. Consume the server base without copying it. |
+| Server | Image, shipped policy and hooks, required in-image management/evidence interfaces, binary compatibility, runtime state, native deployment, and image acceptance. |
+| `integration-tak` | `tak-operator` strict-authentication contracts, Core projection and readback, freshness, sessions, observation, durable reporting, and coupled live acceptance. Also owns client packages, grants, and UI. Consume the server base without copying it. |
 | Core | Immutable identity, effective permissions, approved credentials, purpose/generation mapping, issuance, durable activation evidence, and mapped predecessor revocation. |
 
-The [Core contracts](../../integration-tak/docs/core-contracts.md) remain open at the pinned integration revision.
-Resolve UUID encoding/restore, permission freshness, credential inventory and deadlines, issuance/export authority, namespace/Secret access, UserBinding writers/readiness, HTTP authority, and durable activation reporting.
+The integration workstream owns resolution of the [Core contracts](../../integration-tak/docs/core-contracts.md).
 Do not invent Core CRDs or treat fixture inputs as an agreed API.
-Agree the trusted management writer, transport, freshness bound, and capability versions with integration.
+Agree any required image interface with the `tak-operator` workstream before implementing it.
 Strict fingerprint approval applies only to integrated deployments backed by
 OpenDefence Core User authority. Standalone uses TAK's legacy certificate
 authentication and administrator bootstrap without approval projection.
 
-### Notify integration when server interfaces are ready
+### Image interface handoff
 
-`StrictFingerprintPolicy` and its conformance tests are implemented. No TAK authentication path calls the policy.
-The plugin launcher proves a separate plugin startup workaround. It does not enforce certificate approval.
-The current image installs pinned admission hooks when `TAK_AUTH_MODE=strict`, and the integrated overlay selects legacy mode.
-Strict approval state starts empty; trusted projection and both-JVM readback are still missing.
+The current image installs pinned admission hooks when `TAK_AUTH_MODE=strict`.
+The integrated overlay selects legacy mode.
+Strict approval state starts empty; trusted updates and both-JVM readback remain missing.
+Integration can continue independently where existing APIs suffice.
 
-Notify the user when a pinned candidate enforces strict admission in both messaging and API.
-The candidate must deny startup if the injection is absent or incompatible.
-Its management and capability contract must be stable and versioned.
-Do not wait for full release acceptance before requesting integration adapter work.
-Provide the image digest, unchanged vendor WAR/JAR checksums, extension version, and active-mode check.
-Provide complete-set write and readback schemas, error behavior, the authority freshness bound, access controls, and both applied revisions.
-Show an approved leaf gaining access and an unapproved same-UUID leaf denied before access.
-Ask the user to resume `integration-tak` for its server projector and capability/readback adapters.
-List the remaining live acceptance checks and Core contract dependencies.
-
-Notify the user again when a versioned completed-authentication signal and recovery query are available.
-Supply their connection, UUID, leaf fingerprint, approval revision, time, and replay semantics.
-Ask the user to resume the integration observer.
-Keep integration I1 and production readiness open until the live CoT, HTTPS, session, restart, and revocation checks pass.
+For a required image change, provide its digest, unchanged vendor checksums, extension version, and active-mode check.
+Document the interface schema, errors, access controls, and compatibility limits.
+Verify missing or incompatible injection fails before client traffic.
+The integration workstream owns the writer, freshness renewal, observer, and final coupled acceptance.
+Use its [image change handoff](../../integration-tak/docs/tak-server-change-handoff.md) for reproduced gaps.
 
 ## T2 implementation slices
 
@@ -147,46 +139,36 @@ An [isolated fresh install and HTTPS renewal](t2-standalone-renewal.md) passed w
 The API launcher now waits up to 180 seconds for the messaging CoT listener before starting its JVM, and exits for a Kubernetes retry if it never appears. A delayed-messaging rollout passed; reproduce the original missing-metrics-service failure on a fresh install before closing this race.
 Then test password and trust rotation, automatic issuer renewal, and the actual standalone overlay.
 
-### 4. Wire strict authentication and management
+### 4. Maintain image support for integrated strict authentication
 
-- [x] Inspect the pinned messaging and HTTP authentication seams and add a
-  [vendor compatibility probe](t2-strict-hook-inspection.md). It rejects other
-  artifact hashes and changed inspected signatures; it does not install hooks.
-- [x] Implement an external launcher/extension for messaging and API. The agent pins the vendor tuple and transformed class bytes, verifies both classloader paths before TAK startup, and fails closed on missing/incompatible injection. Live negative CoT/HTTP checks passed; approved-client and revocation acceptance remain below.
+The `tak-operator` owns the [strict-authentication work list](../../integration-tak/docs/remaining-work-handoff.md#integrated-strict-authentication-ownership).
+Keep controller work and Core contracts in that repository.
+This slice covers only code and interfaces shipped in the TAK image.
+
+- [x] Inspect pinned messaging and HTTP authentication seams. The [vendor compatibility probe](t2-strict-hook-inspection.md) rejects unsupported hashes and inspected signatures.
+- [x] Implement an external launcher/extension for messaging and API. The agent pins the vendor tuple and transformed class bytes, verifies both classloader paths before TAK startup, and fails closed on missing/incompatible injection. Live negative CoT/HTTP checks passed; integration owns approved-client and revocation acceptance.
 - [x] Add explicit `TAK_AUTH_MODE` startup validation outside the vendor CoreConfig schema. A missing/incompatible agent fails strict startup; empty, invalidated, or restarted approval state denies access without a legacy fallback. Keep separate future management settings outside the vendor schema.
-- [ ] Expose a trusted complete-set update for one UUID's approved leaf fingerprints, explicit deadline, and conditional revision. Provide immutable readback and clear conflicts, failures, and limit errors.
 - [x] Permit the `tak-operator`'s exact mTLS leaf through strict HTTP admission when its public certificate is supplied by `tak-integration-admin/tls.crt`. Its issuer must already be in TAK client trust, and the `tak-operator` must register that leaf as an administrator through JNI. The exception applies only to the API JVM; TAK's REST authorization still decides access. The certificate alone is not the approval-management endpoint.
-- [ ] Use that same mTLS identity on the existing 8443 REST service for the strict projection update/readback endpoint. Authorize its exact pinned leaf and administrator registration there; keep both-JVM application and acknowledgement explicit. No separate management listener or bootstrap credential is needed.
-- [ ] Accept installed integration identities on whichever TAK interface their manifests require, including 8443 REST and 8089 CoT. Installing the integration Zarf package is the authorization event; do not add a separate approval workflow or put integrations in the user UUID approval set. Project the current installed-manifest identity/certificate inventory to both JVMs with readback and a freshness bound. Match the authenticated certificate to the manifest's integration identity and issuer plus serial (and exact leaf when available); a serial alone or a naming prefix is insufficient. Remove access when the manifest is removed or its credential changes. Keep TAK's existing role and endpoint authorization after admission.
-- [ ] Apply and acknowledge the projection in both messaging and API JVMs. Bind permission and credential readback to the requested projection; preserve roles, groups, and the UUID account when one leaf is removed. Resolve uncertain writes by readback before retry.
-- [ ] Define the owner that renews only after confirming the complete authority and invalidates approval on stale/unavailable authority. The policy now enforces a 60-second authority lease and rejects renewal of an expired nonempty projection; complete both-JVM owner wiring and test loss/recovery. Missing, expired, invalidated, and restarted state must deny access.
-- [ ] Enforce after TLS chain/client-usage validation and before every role, group, cache, token, LDAP, or anonymous grant. Audit enabled certificate entry points and disable unsupported transports until tested.
-- [ ] Stop denied messaging before the first CoT is routed. Cover protected HTTP, cached principals, existing connections, tokens, and resumed TLS sessions. Define and measure the revocation bound.
-- [ ] Package and version the external extension, its configuration schema, and management capability with the unchanged WAR and `UserManager.jar`. Add a companion management JAR only if the new interface needs one. Expose the active strict mode, extension version, and vendor artifact identifiers so integration rejects incompatible or inactive enforcement.
+- [ ] Provide a trusted policy update/readback interface if existing APIs cannot reach the in-JVM state. Use 8443 and the existing integration administrator mTLS identity. Require complete sets, explicit deadlines, conditional revisions, immutable readback, and clear conflicts and limit errors in both JVMs.
+- [ ] Close reproduced gaps in admission, session hooks, or the policy identity model that require image changes. Preserve chain/client-usage validation, TAK role authorization, and denial before protected access. The current exact-CN model needs compatibility review against integration's per-certificate records and Core's UUID URI SAN.
+- [ ] Version the extension, configuration, and required management capability with the unchanged WAR and `UserManager.jar`. Expose the active mode and artifact identifiers. Add a companion management JAR only if the interface needs one.
 
 Reuse `StrictFingerprintPolicy`. Its state is private to one JVM and is empty after restart.
-The current `tak-integration-admin` pin is a narrow 8443 bootstrap for the installed TAK integration. It does not yet provide the general installed-integration registry or 8089 access.
-Its random revisions are neither Core generations nor durable activation events.
-Validate the current limits of 1,024 accounts, 32 fingerprints per account, and 256 account characters against intended deployments.
-Do not encode a list in the legacy scalar field, alternate registrations, or delete the shared account to revoke one leaf.
-A prior policy decision is not cancelled by concurrent removal; connection enforcement remains required.
-Keep the optional disconnect guard decision open. A post-authentication guard cannot replace strict admission.
+Its 60-second authority lease is enforced in the image; the `tak-operator` owns renewal and invalidation.
+The exact `tak-integration-admin` leaf pin permits only the API path, not general installed integration access or 8089.
+Integration owns installed identity inventory, permission projection, complete-set readback, session handling, and revocation timing.
+A disconnect after authentication cannot establish strict admission.
 
-### 5. Provide completed-authentication evidence
+### 5. Provide image authentication evidence only when needed
 
-- [ ] Inspect existing APIs for a completed-authentication signal. If none suffices, expose the smallest signal/query through the external strict-authentication extension.
-- [ ] Bind positive evidence to the exact connection, UUID, leaf SHA-256, applied approval revision, and observation time. Provide an authenticated current-state recovery query for missed notifications.
-- [ ] Support activation without requiring CoT or an HTTP application transaction. Test short-lived connections, stale/revoked/superseded observations, restart, reconnect, and resumption.
+Integration owns completed-authentication observation, recovery, and durable Core reporting.
+It must first inspect existing APIs against its acceptance requirements.
 
-`ConnectionInfo` receives the peer leaf before TAK authentication completes and has no authentication-status field.
-TLS success or connection/subscription presence alone cannot establish activation.
-Integration owns observation and durable reporting; Core owns independent main/TAK-only activation and exact predecessor revocation.
-Downloads and manual acknowledgement are not activation. Planned overlap has no default forced-cutover timer.
-Do not build a second identity or issuance system in TAK.
+- [ ] If existing APIs cannot establish completed authentication, expose the smallest versioned signal/query in the image. Bind it to the exact connection, UUID, leaf SHA-256, approval revision, and time. Support recovery without requiring a CoT message or HTTP application transaction.
 
-The component probe also shows that later CoT replaces contact-map callsign edits.
-Do not promise a durable callsign through that API. Bind any server contact update to an authenticated CoT UID and preserve identity and permissions.
-Client preferences and a `client-update-required` outcome belong to integration.
+`ConnectionInfo` receives peer metadata before authentication and has no authentication-status field.
+TLS success or connection presence alone cannot establish activation.
+Keep activation semantics, callsign handling, and observer tests in the integration workstream.
 
 ### 6. Complete standalone operation, CI, and cleanup
 
@@ -206,7 +188,7 @@ Remove the six named scripts from supported workflows and image packaging. Do no
 | Retire | Current consumers | Replacement |
 | --- | --- | --- |
 | `scripts/makeCert.sh` and copied `data/certs/makeCert.sh` | Source helper and Compose initializer removed; old PVC copies may remain | Native identities use issuer-managed or supplied JKS and coherent password Secrets. Import existing certificates without changing fingerprints; do not execute stale PVC copies. |
-| `scripts/delete_user.sh`, `disable_admin.sh`, `enable_admin.sh`, `enable_user.sh` | Removed from source and image; old README examples replaced | The native bootstrap Job uses `user-manager.sh` for initial admin registration. General user/admin role management and strict complete-set projection still need slice 4's verified interface. Never revoke one leaf by deleting its account or demote an administrator by deleting and recreating the user. |
+| `scripts/delete_user.sh`, `disable_admin.sh`, `enable_admin.sh`, `enable_user.sh` | Removed from source and image; old README examples replaced | The native bootstrap Job uses `user-manager.sh` for initial admin registration. Integrated role management and strict complete-set projection belong to `tak-operator`; required image interfaces are in slice 4. Standalone user/admin management acceptance remains open. Never revoke one leaf by deleting its account or demote an administrator by deleting and recreating the user. |
 | `scripts/make_client_zip.sh` | Removed with `templates/missionpkg`, `pwgen`, and runtime `zip` | Integrated issuance/export and client packages belong to Core and `integration-tak`. Standalone package import from externally issued credentials remains an acceptance check. |
 | Vendor `makeRootCa.sh`, `cert-metadata.sh`, and copied certificate helper files | Legacy initializer removed; the vendor distribution still bundles these helpers | Use native identity inputs and the schema Job. Keep signing keys outside ordinary server Pods. Preserve existing trust and identities on adoption; do not copy executable certificate helpers into the PVC. |
 | Vendor `make-connection-package.sh`, `revokeCert.sh`, and `generateClusterCerts*.sh` | Bundled in the pinned distribution and copied to `data/certs`; no direct repository caller found | Use the owning integration's package export, explicit approval removal plus PKI revocation, and issuer-managed cluster identities. Check external callers before removing the files from supported images or PVC initialization. |
@@ -216,7 +198,7 @@ Remove the six named scripts from supported workflows and image packaging. Do no
 | Vendor database setup, `upgrade-db.sh`, clear, archive, and restore scripts | Bundled in the pinned distribution; no maintained Compose initializer remains | Use the versioned schema Job and the coordinated backup/restore procedure in slice 6. Never run a vendor clear or restore script against adopted data. Verify no supported caller before image cleanup. |
 
 - [ ] Audit direct calls, sourced files, transitive vendor helpers, image entrypoints, and copy operations against the pinned distribution. Include optional plugin/retention roles, schema tooling, tests, CI, README, AGENTS, and integration consumers. Record each remaining dependency and its replacement before removal.
-- [ ] Reuse `user_manager.py` and existing launchers only where their binary interface meets the required contract. The maintained `user-manager.sh` no longer sources `setenv.sh`, but strict complete-set projection still needs slice 4's interface.
+- [ ] Reuse `user_manager.py` and existing launchers only where their binary interface meets the required contract. The maintained `user-manager.sh` no longer sources `setenv.sh`, but the integrated strict writer belongs to `tak-operator`; required image interfaces are in slice 4.
 - [ ] Update supported commands, fixtures, tests, image copies, environment variables, and dependencies together. Retain historical reports as evidence. Stop executing stale helper copies on existing PVCs; never wipe a PVC to remove scripts.
 - [ ] Prove fresh and repeated standalone bootstrap, identity import/renewal, user enable/disable, and admin promotion/demotion while preserving administrator federation trust. Prove single-leaf approval removal, preserved UUID/groups/other approved leaves, and client package import in the integrated workflow.
 - [ ] Require an image/caller check that supported startup, management, migration, and package workflows do not execute these scripts. Repeat binary compatibility checks for each TAK release before removing the last fallback.
@@ -226,8 +208,9 @@ Remove the six named scripts from supported workflows and image packaging. Do no
 T3 uses `gpt-6-astra` / `high`; T4 uses `gpt-6.1-sol` / `high`.
 Escalate unexplained runtime/design behavior through T1 `gpt-6-astra` / `xhigh` with a reproduction.
 Use the final image, base, external extension/configuration, and vendor/management JAR tuple together. Preserve sanitized inputs, checksums, assertions, outcomes, and limits.
-Strict admission, projection, and authentication-evidence checks apply to the
-integrated deployment. Standalone acceptance uses legacy certificate authentication.
+Integration owns the strict admission, projection, session, and authentication-evidence acceptance below.
+This server plan retains those shared release gates for image consumers.
+Standalone acceptance uses legacy certificate authentication.
 
 | Area | Required evidence |
 | --- | --- |
