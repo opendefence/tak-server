@@ -90,6 +90,19 @@ workflow. Packages are published to `ghcr.io/opendefence/zarf/tak-server` with
 the image digest and package references. Use references from successful runs.
 The packages retain the `5.8.92-candidate` metadata version.
 
+Same-repository PR runs also build standalone packages after native validation
+passes. Download `tak-server-standalone` from the workflow run's **Artifacts**
+section; it contains AMD64 and ARM64 `.tar.zst` packages with the tested image
+digest bundled. Main runs provide the same artifact using their signed packages;
+PR packages are unsigned candidates. Fork, Dependabot, and manual validation runs
+do not produce these artifacts. Artifacts expire according to repository retention.
+After extracting the artifact ZIP and preparing the prerequisites below, deploy
+the archive matching your cluster's architecture:
+
+```sh
+zarf package deploy zarf-package-tak-server-amd64-5.8.92-candidate.tar.zst
+```
+
 After preparing the deployment prerequisites below, deploy a published package:
 
 ```sh

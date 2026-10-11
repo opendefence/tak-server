@@ -116,6 +116,7 @@ jobs:
           fi
           repository="oci://${TAK_IMAGE%/*}/zarf"
           shopt -s nullglob
+          mkdir -p outputs/zarf/standalone
           printf '## Published Zarf packages\n\n' >> "$GITHUB_STEP_SUMMARY"
           for flavor in standalone integrated; do
             for arch in amd64 arm64; do
@@ -134,6 +135,16 @@ jobs:
                 --tag "latest-$flavor" --confirm
               printf -- '- `%s/tak-server:%s-%s` and `latest-%s` (%s)\n' \
                 "$repository" "$version_tag" "$flavor" "$flavor" "$arch" >> "$GITHUB_STEP_SUMMARY"
+              if [[ "$flavor" == standalone ]]; then
+                cp "${packages[0]}" outputs/zarf/standalone/
+              fi
               rm -rf "$build_dir"
             done
           done
+      - name: Upload standalone Zarf packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tak-server-standalone
+          path: outputs/zarf/standalone/zarf-package-*.tar.zst
+          if-no-files-found: error
+          compression-level: 0

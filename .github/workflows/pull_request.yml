@@ -94,6 +94,25 @@ jobs:
         run: |
           mise exec -- task --yes up
           test "$(docker image inspect --format '{{.Id}}' localhost/tak-server:local)" = "$TAK_TEST_IMAGE"
+      - name: Build standalone Zarf packages
+        if: needs.publish_pr_image.result == 'success'
+        env:
+          TAK_IMAGE: ${{ needs.publish_pr_image.outputs.tak-image }}
+        run: |
+          set -euo pipefail
+          mkdir -p outputs/zarf/standalone
+          for arch in amd64 arm64; do
+            zarf package create . --architecture "$arch" --flavor standalone \
+              --set "TAK_IMAGE=$TAK_IMAGE" --confirm --output outputs/zarf/standalone
+          done
+      - name: Upload standalone Zarf packages
+        if: needs.publish_pr_image.result == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tak-server-standalone
+          path: outputs/zarf/standalone/zarf-package-*.tar.zst
+          if-no-files-found: error
+          compression-level: 0
       - name: Show native workload status on failure
         if: failure()
         run: |

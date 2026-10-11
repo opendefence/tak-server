@@ -151,7 +151,9 @@ class WorkflowReleaseTest(unittest.TestCase):
         step = workflow.split("      - name: Build, sign, and publish Zarf packages\n")[
             1
         ]
-        script = textwrap.dedent(step.split("        run: |\n", 1)[1])
+        script = textwrap.dedent(
+            step.split("        run: |\n", 1)[1].split("      - name:", 1)[0]
+        )
         stub = r"""
         python3() { "$TEST_PYTHON" "$@"; }
         zarf() {
@@ -159,7 +161,7 @@ class WorkflowReleaseTest(unittest.TestCase):
           printf '\n' >> "$COMMAND_LOG"
           if [[ "$1 $2" == 'package create' ]]; then
             for ((i = 0; i < ARCHIVE_COUNT; i++)); do
-              touch "${@: -1}/zarf-package-test-$i.tar.zst"
+              touch "${@: -1}/zarf-package-test-$arch-$i.tar.zst"
             done
           fi
           [[ "$2" != "$FAIL_COMMAND" ]]
@@ -202,6 +204,16 @@ class WorkflowReleaseTest(unittest.TestCase):
                         continue
                     self.assertEqual(result.returncode, 0, result.stderr)
                     self.assertEqual(len(commands), 16)
+                    self.assertEqual(
+                        sorted(
+                            path.name
+                            for path in (root / "outputs/zarf/standalone").iterdir()
+                        ),
+                        [
+                            "zarf-package-test-amd64-0.tar.zst",
+                            "zarf-package-test-arm64-0.tar.zst",
+                        ],
+                    )
                     for index, (flavor, arch) in enumerate(
                         (flavor, arch)
                         for flavor in ("standalone", "integrated")
@@ -226,7 +238,9 @@ class WorkflowReleaseTest(unittest.TestCase):
                                 "--output",
                             ],
                         )
-                        archive = str(Path(create[-1]) / "zarf-package-test-0.tar.zst")
+                        archive = str(
+                            Path(create[-1]) / f"zarf-package-test-{arch}-0.tar.zst"
+                        )
                         self.assertEqual(
                             sign, ["package", "sign", archive, "--keyless", "--confirm"]
                         )
@@ -246,6 +260,79 @@ class WorkflowReleaseTest(unittest.TestCase):
                                     "--confirm",
                                 ],
                             )
+
+    def test_standalone_zarf_artifacts(self) -> None:
+        workflows = Path(__file__).resolve().parents[1] / ".github/workflows"
+        workflow = (workflows / "pull_request.yml").read_text()
+        step = workflow.split("      - name: Build standalone Zarf packages\n", 1)[1]
+        script = textwrap.dedent(
+            step.split("        run: |\n", 1)[1].split("      - name:", 1)[0]
+        )
+        stub = r"""
+        zarf() {
+          printf '%q ' "$@" >> "$COMMAND_LOG"
+          printf '\n' >> "$COMMAND_LOG"
+          [[ "$FAIL_CREATE" != true ]] || return 1
+          touch "${@: -1}/zarf-package-test-$arch.tar.zst"
+        }
+        """
+        image = "ghcr.io/opendefence/tak-server@sha256:" + "a" * 64
+        for failure in ("false", "true"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                log = root / "commands"
+                result = subprocess.run(
+                    ["bash", "-c", textwrap.dedent(stub) + script],
+                    cwd=root,
+                    env={
+                        **os.environ,
+                        "TAK_IMAGE": image,
+                        "COMMAND_LOG": str(log),
+                        "FAIL_CREATE": failure,
+                    },
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(result.returncode == 0, failure == "false")
+                commands = [shlex.split(line) for line in log.read_text().splitlines()]
+                if failure == "true":
+                    self.assertEqual(len(commands), 1)
+                    continue
+                self.assertEqual(
+                    commands,
+                    [
+                        [
+                            "package",
+                            "create",
+                            ".",
+                            "--architecture",
+                            arch,
+                            "--flavor",
+                            "standalone",
+                            "--set",
+                            f"TAK_IMAGE={image}",
+                            "--confirm",
+                            "--output",
+                            "outputs/zarf/standalone",
+                        ]
+                        for arch in ("amd64", "arm64")
+                    ],
+                )
+                self.assertEqual(
+                    len(list((root / "outputs/zarf/standalone").glob("*.tar.zst"))), 2
+                )
+        for name in ("pull_request.yml", "push_to_main.yml"):
+            upload = (
+                (workflows / name)
+                .read_text()
+                .split("      - name: Upload standalone Zarf packages\n", 1)[1]
+                .split("      - name:", 1)[0]
+            )
+            self.assertIn("name: tak-server-standalone", upload)
+            self.assertIn(
+                "path: outputs/zarf/standalone/zarf-package-*.tar.zst", upload
+            )
+            self.assertIn("if-no-files-found: error", upload)
 
 
 if __name__ == "__main__":

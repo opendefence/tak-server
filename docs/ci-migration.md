@@ -12,7 +12,10 @@ such as `+` become `-`. An additional `pr-NUMBER-RUN_ID-ATTEMPT` tag lets the
 publishing job resolve its own digest even when another PR run publishes at the
 same time. PR builds do not move the vendor release tag or main's `latest` tag.
 Fork PRs, Dependabot PRs, and manual validation runs skip the publishing job.
-PRs do not publish Zarf packages.
+PRs do not publish Zarf packages to GHCR. After native validation passes,
+same-repository PRs build standalone AMD64 and ARM64 package archives using that
+run's published image digest. The `tak-server-standalone` workflow artifact
+contains both archives for download; these PR candidates are unsigned.
 
 `native_validations` consumes the publishing job's `tak-image` digest output,
 pulls it from GHCR, and records the local platform image ID as `TAK_TEST_IMAGE`.
@@ -50,6 +53,12 @@ The Zarf path keeps package tags separate from the runtime image. Tags are
 `-`. Architectures publish sequentially into the same flavor tag's OCI index.
 GHCR login is reused from the image publishing action; signing requires the
 job's `id-token: write` permission.
+
+Main also uploads its signed standalone archives as the `tak-server-standalone`
+workflow artifact. Both workflows fail the upload if archives are missing and
+skip additional ZIP compression of the already compressed `.tar.zst` files.
+Artifacts use repository retention. See [deployment instructions](../k8s/README.md#zarf-packages)
+for downloads and prerequisites.
 
 Zarf package creation consumes the tested digest through `--set TAK_IMAGE=...`;
 it does not build the server image. Failed checks or publishing steps fail the
