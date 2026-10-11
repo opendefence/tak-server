@@ -24,6 +24,13 @@ jobs:
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Check TAK release sync
         run: uv run --frozen -m unittest tests.test_workflow_release -v
+      - name: Test strict fingerprint policy and hooks
+        run: |
+          docker run --rm --network none --cpus 2 --memory 512m \
+            --tmpfs /work:rw,size=64m \
+            -v "$PWD/extensions/strict-fingerprint:/extension:ro" \
+            eclipse-temurin:17-jdk-noble@sha256:fb79620c3f6ee8f1c7530a8dc4fd49e3b410bcef037694ad4858a1553bac4170 \
+            sh /extension/test.sh
       - name: Run prek
         uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204 # v3.0.1
         env:
