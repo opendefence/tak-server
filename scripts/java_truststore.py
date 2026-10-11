@@ -5,13 +5,21 @@ import os
 import re
 import shutil
 import ssl
+import subprocess
 import tempfile
+from collections.abc import Mapping
 from pathlib import Path
-
-from tls_identity import run
 
 # This store contains public certificates only, like the JRE's cacerts.
 STORE_PASSWORD = "changeit"  # pragma: allowlist secret
+
+
+def run(
+    command: list[str], *, env: Mapping[str, str] | None = None, cwd: Path | None = None
+) -> bytes:
+    """Do not emit private material or command arguments containing credentials."""
+    result = subprocess.run(command, check=True, capture_output=True, env=env, cwd=cwd)
+    return result.stdout
 
 
 def initialize(base_store: Path, destination: Path, bundles: list[Path]) -> None:

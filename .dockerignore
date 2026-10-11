@@ -3,6 +3,7 @@
 .git
 .cache
 .venv
+takserver.env
 
 # the default mount for outputs from the package builder
 outputs

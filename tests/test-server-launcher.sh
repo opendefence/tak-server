@@ -39,5 +39,6 @@ for retired in delete_user disable_admin enable_admin enable_user make_client_zi
     exit 1
   fi
 done
-[[ ! -e /opt/templates/missionpkg && ! -e /kw_product_init ]]
+[[ ! -e /opt/templates/missionpkg && ! -e /kw_product_init && ! -e /opt/scripts/tls_identity.py ]]
+[[ ! -e /opt/scripts/init-fed-truststore.py ]]
 echo 'PASS: retired account, package, and initialization helpers are absent from the image'

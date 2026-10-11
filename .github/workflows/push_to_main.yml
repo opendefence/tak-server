@@ -23,8 +23,6 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-      - name: Prepare env file for hooks
-        run: cp takserver.env.example takserver.env
       - name: Install uv
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Check TAK release sync
@@ -92,7 +90,7 @@ jobs:
             --entrypoint /usr/bin/python3 "$TAK_TEST_IMAGE" \
             -B -m unittest discover -s /workspace/tests -v
           sh tests/test-strict-agent.sh "$TAK_TEST_IMAGE"
-          for test in test-server-launcher test-fed-truststore test-api-keystore; do
+          for test in test-server-launcher test-api-keystore; do
             docker run --rm --pull=never --network none -v "$PWD:/workspace:ro" \
               --entrypoint /bin/bash "$TAK_TEST_IMAGE" "/workspace/tests/$test.sh"
           done

@@ -11,7 +11,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 import initialize_volume  # noqa: E402
 import start_tak  # noqa: E402
-from tls_identity import run  # noqa: E402
+from java_truststore import run  # noqa: E402
 
 
 class InitializeVolumeTest(unittest.TestCase):
