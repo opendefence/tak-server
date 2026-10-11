@@ -70,7 +70,29 @@ Keep CoT and HTTPS identities separate. Do not widen client trust with public Ja
 The repository root [`zarf.yaml`](../zarf.yaml) packages both native overlays and
 the schema/grants Jobs as `standalone` and `integrated` flavors. Use Zarf's lowercase filename.
 Build with a published, pinned TAK image digest; each package includes that image
-for offline deployment:
+for offline deployment.
+
+The main workflow publishes the Dockerfile's `run` image to
+`ghcr.io/opendefence/tak-server` for `linux/amd64` and `linux/arm64` after checks pass.
+It tests the published digest, lints both Zarf flavors, then builds and signs
+packages for AMD64 and ARM64 using GitHub OIDC, following the `base` publishing
+workflow. Packages are published to `ghcr.io/opendefence/zarf/tak-server` with
+`VERSION-standalone`, `VERSION-integrated`, `latest-standalone`, and
+`latest-integrated` tags. `VERSION` is the repository version with `+` replaced by
+`-`; each flavor tag contains both architectures. The workflow summary lists
+the image digest and package references. Use references from successful runs.
+The packages retain the `5.8.92-candidate` metadata version.
+
+After preparing the deployment prerequisites below, deploy a published package:
+
+```sh
+zarf package deploy oci://ghcr.io/opendefence/zarf/tak-server:latest-standalone --architecture amd64
+```
+
+Use `latest-integrated` for the integrated flavor and `--architecture arm64` for
+ARM64. To select a release, use the versioned flavor tag from the
+workflow summary. To build a package locally, use the image digest from a
+successful run of the same commit as the package sources:
 
 ```sh
 zarf dev lint . --flavor standalone --set TAK_IMAGE=ghcr.io/opendefence/tak-server@sha256:<published-digest>
@@ -128,7 +150,7 @@ creation, while values are substituted at deployment.
 ## Install
 
 Build the image with the repository Dockerfile. Override `JAVA_RUNTIME_IMAGE` and `JAVA_BUILD_IMAGE` with pinned images.
-Pin the candidate image in an overlay before applying it. A publishing destination is not yet enabled.
+Pin the candidate image from `ghcr.io/opendefence/tak-server` by digest in an overlay before applying it.
 The Kind overlay selects the local `localhost/tak-server:release-92` test image and disables pulls.
 Load that image into the intended Kind cluster before applying the overlay.
 

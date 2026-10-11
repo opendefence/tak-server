@@ -196,7 +196,7 @@ Client preferences and a `client-update-required` outcome belong to integration.
 - [ ] Finish native replacement checks after removing Compose deployment, obsolete OSS build, RM bootstrap, duplicate user/ZIP wrappers, and Azure/DevSpace paths. Retain `build_compose.yml` for distribution builds, optional pinned APK/update content, and historical LFS data.
 - [ ] Provide coordinated backup/restore for database, XML, file-auth, trust, content, and identities. Uninstall must retain data. Integration separately excludes live grants from restore.
 - [ ] Finish [CI migration](ci-migration.md): pinned actions, non-publishing PRs, `arc-runner-set`, native AMD64/ARM64 BuildKit with `/etc/buildkit/tls/{ca.crt,tls.crt,tls.key}`, and disposable Kubernetes validation of the exact candidate.
-- [ ] Keep `TAK_PUBLISH_ENABLED` unset until acceptance passes. Target `ghcr.io/opendefence/tak-server`; add no Snyk placeholder. Publication still needs separate authorization and an independent destination clone check.
+- [x] Configure main to publish the runtime image to `ghcr.io/opendefence/tak-server` for AMD64/ARM64, verify the published digest, and build, sign, and publish both Zarf flavors to `ghcr.io/opendefence/zarf/tak-server`. Live runner/deployment acceptance and offline deployment of those packages remain open; see [CI migration](ci-migration.md).
 
 ### 7. Retire fragile distribution scripts and legacy wrappers
 
