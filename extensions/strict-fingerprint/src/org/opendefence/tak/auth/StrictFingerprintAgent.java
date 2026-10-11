@@ -16,14 +16,14 @@ import javassist.LoaderClassPath;
 
 /** Pins transformed class bytes and halts on any incomplete strict installation. */
 public final class StrictFingerprintAgent {
-    private static final String WAR = "9f03a3c21e5ed09350fd92a2c16fed0dca246122dfb8f266e4179f3ca4134523";
-    private static final String USER_MANAGER = "0fe547c2f4ce05d06a2e9724e0c2837eab0a0ba5be398390bb974b2385ce6f14";
+    private static final String WAR = "9f03a3c21e5ed09350fd92a2c16fed0dca246122dfb8f266e4179f3ca4134523"; // pragma: allowlist secret
+    private static final String USER_MANAGER = "0fe547c2f4ce05d06a2e9724e0c2837eab0a0ba5be398390bb974b2385ce6f14"; // pragma: allowlist secret
     private static final String CODEC = "com/bbn/marti/nio/codec/impls/X509AuthCodec";
     private static final String AUTHENTICATOR = "com/bbn/marti/groups/X509Authenticator";
     private static final String HTTP = "org/springframework/security/web/access/intercept/FilterSecurityInterceptor";
-    private static final String CODEC_HASH = "931567f9cfe8c65594d42531f7abc77361850bfd31632ac9e41658f6bcafa7dc";
-    private static final String AUTHENTICATOR_HASH = "36cd42af013288a87e001e2694b2241d78fd2c7cd8687561bf0976978e36b275";
-    private static final String HTTP_HASH = "c916dc2df009dc140b456965e602defdac3e0819259eb08b00cf8aaaabb0c633";
+    private static final String CODEC_HASH = "931567f9cfe8c65594d42531f7abc77361850bfd31632ac9e41658f6bcafa7dc"; // pragma: allowlist secret
+    private static final String AUTHENTICATOR_HASH = "36cd42af013288a87e001e2694b2241d78fd2c7cd8687561bf0976978e36b275"; // pragma: allowlist secret
+    private static final String HTTP_HASH = "c916dc2df009dc140b456965e602defdac3e0819259eb08b00cf8aaaabb0c633"; // pragma: allowlist secret
     private static final Set<String> INSTALLED = ConcurrentHashMap.newKeySet();
     private static volatile boolean active;
 
