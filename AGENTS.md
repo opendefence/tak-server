@@ -72,6 +72,11 @@ LoadBalancer.
    commit-message checks run on local commits. Run `prek run --all-files`
    regularly, especially before pushing or creating/updating a PR when authorized
    to do so. Fix any failures before proceeding.
+ 8. Use the [`ponytail`](https://github.com/DietrichGebert/ponytail) skill for all coding work.
+ 9. Run `ponytail-audit` before every commit. Fix findings caused by the staged change before committing.
+10. Write all documentation in Simplified Technical English (STE). Use short, active sentences and consistent terms. Give one instruction per sentence. Preserve exact commands and identifiers.
+
+
 
 ## Related repositories
 
