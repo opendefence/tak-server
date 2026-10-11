@@ -6,8 +6,6 @@ ARG TEMURIN_VERSION="17"
 ARG JAVA_RUNTIME_IMAGE="eclipse-temurin:${TEMURIN_VERSION}-jre-noble"
 ARG JAVA_BUILD_IMAGE="eclipse-temurin:${TEMURIN_VERSION}-jdk-noble"
 ARG TAK_RELEASE="5.8-RELEASE-92"
-ARG KW_PRODUCT_INIT_IMAGE="ghcr.io/pvarki/kraftwerk-helper-tool:1.4.0-260912"
-FROM ${KW_PRODUCT_INIT_IMAGE} AS product-init
 FROM pvarki/tak-server-dist:$TAK_RELEASE AS tak-files
 RUN mv /zips/takserver-docker-*.zip /tmp/takserver.zip
 
@@ -20,15 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       unzip \
       tini \
       curl \
-      pwgen \
-      zip \
       postgresql-client \
-      jq \
     && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/* \
-    && curl https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh -o /usr/bin/wait-for-it.sh \
-    && chmod a+x /usr/bin/wait-for-it.sh \
-    && true
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=hairyhenderson/gomplate:stable /gomplate /bin/gomplate
 SHELL ["/bin/bash", "-lc"]
@@ -122,5 +114,4 @@ COPY templates /opt/templates
 COPY update /opt/tak/webcontent/update
 
 FROM install AS run
-COPY --from=product-init /kw_product_init /kw_product_init
 ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]
