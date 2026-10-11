@@ -1,0 +1,8 @@
+- op: add
+  path: /spec/template/spec/containers/2/volumeMounts/-
+  value: {name: integration-admin, mountPath: /identities/integration-admin, readOnly: true}
+- op: add
+  path: /spec/template/spec/volumes/-
+  value:
+    name: integration-admin
+    secret: {secretName: tak-integration-admin, optional: true, items: [{key: tls.crt, path: tls.crt}]} # pragma: allowlist secret

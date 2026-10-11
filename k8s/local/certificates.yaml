@@ -3,7 +3,7 @@ kind: Certificate
 metadata:
   name: tak-cot-identity
 spec:
-  secretName: tak-cot-identity
+  secretName: tak-cot-identity # pragma: allowlist secret
   commonName: tak.localtest.me
   dnsNames: [tak.localtest.me]
   privateKey: {algorithm: RSA, size: 2048}
@@ -19,7 +19,7 @@ kind: Certificate
 metadata:
   name: tak-https-identity
 spec:
-  secretName: tak-https-identity
+  secretName: tak-https-identity # pragma: allowlist secret
   commonName: tak.localtest.me
   dnsNames: [tak.localtest.me]
   privateKey: {algorithm: RSA, size: 2048}
@@ -35,7 +35,7 @@ kind: Certificate
 metadata:
   name: tak-client-trust
 spec:
-  secretName: tak-client-trust
+  secretName: tak-client-trust # pragma: allowlist secret
   commonName: tak-client-trust
   privateKey: {algorithm: RSA, size: 2048}
   usages: [digital signature]
@@ -50,7 +50,7 @@ kind: Certificate
 metadata:
   name: tak-federation-bootstrap
 spec:
-  secretName: tak-federation-bootstrap
+  secretName: tak-federation-bootstrap # pragma: allowlist secret
   commonName: tak-federation-bootstrap
   privateKey: {algorithm: RSA, size: 2048}
   usages: [digital signature]
@@ -65,7 +65,7 @@ kind: Certificate
 metadata:
   name: tak-probe-identity
 spec:
-  secretName: tak-probe-identity
+  secretName: tak-probe-identity # pragma: allowlist secret
   commonName: local-admin
   privateKey: {algorithm: RSA, size: 2048}
   usages: [digital signature, client auth]

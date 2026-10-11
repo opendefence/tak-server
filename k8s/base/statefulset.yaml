@@ -139,28 +139,28 @@ spec:
         - {name: runtime-api, emptyDir: {}}
         - name: cot
           secret:
-            secretName: tak-cot-identity
+            secretName: tak-cot-identity # pragma: allowlist secret
             defaultMode: 384
             items: [{key: keystore.jks, path: keystore.jks}]
         - name: https
           secret:
-            secretName: tak-https-identity
+            secretName: tak-https-identity # pragma: allowlist secret
             defaultMode: 384
             items: [{key: keystore.jks, path: keystore.jks}]
         - name: client-trust
           secret:
-            secretName: tak-client-trust
+            secretName: tak-client-trust # pragma: allowlist secret
             defaultMode: 384
             items: [{key: truststore.jks, path: truststore.jks}]
         - name: federation
           secret:
-            secretName: tak-federation-bootstrap
+            secretName: tak-federation-bootstrap # pragma: allowlist secret
             defaultMode: 384
             items: [{key: truststore.jks, path: truststore.jks}]
         - name: probe
-          secret: {secretName: tak-probe-identity, defaultMode: 384}
+          secret: {secretName: tak-probe-identity, defaultMode: 384} # pragma: allowlist secret
         - name: outbound
           secret:
-            secretName: tak-https-identity
+            secretName: tak-https-identity # pragma: allowlist secret
             items: [{key: ca.crt, path: root_ca.pem}]
             defaultMode: 384

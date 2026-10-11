@@ -36,6 +36,6 @@ spec:
       volumes:
         - name: probe
           secret:
-            secretName: tak-probe-identity
+            secretName: tak-probe-identity # pragma: allowlist secret
             items: [{key: tls.crt, path: tls.crt}]
             defaultMode: 384
