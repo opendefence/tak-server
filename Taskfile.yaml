@@ -87,6 +87,7 @@ tasks:
     cmds:
       - test "$(kubectl config current-context)" = {{.TAK_KUBE_CONTEXT | shellQuote}}
       - zarf dev deploy . --connected --flavor standalone --components standalone-schema,standalone-grants,standalone-server --create-set {{printf "TAK_IMAGE=%s" .TAK_IMAGE | shellQuote}} --deploy-set-variables {{printf "TAK_SERVER_ADDRESS=%s" .TAK_SERVER_ADDRESS | shellQuote}} --deploy-set-variables TAK_SERVICE_TYPE=ClusterIP
+      - kubectl --context {{.TAK_KUBE_CONTEXT | shellQuote}} -n tak-server rollout restart statefulset/tak-server
 
   smoke:
     desc: Check standalone readiness and authenticated HTTPS
