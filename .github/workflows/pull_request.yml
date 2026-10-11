@@ -73,6 +73,8 @@ jobs:
           docker run --rm --pull=never --network none -v "$PWD:/workspace:ro" \
             --entrypoint /usr/bin/python3 "$TAK_TEST_IMAGE" \
             -B -m unittest discover -s /workspace/tests -v
+      - name: Verify strict agent installation and fail-closed startup
+        run: sh tests/test-strict-agent.sh "$TAK_TEST_IMAGE"
       - name: Test federation truststore initialization
         run: |
           docker run --rm --pull=never --network none -v "$PWD:/workspace:ro" \

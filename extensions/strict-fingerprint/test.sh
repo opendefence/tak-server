@@ -17,5 +17,8 @@ for name in main tak-only unapproved other duplicate-cn duplicate-cn-rdn multiva
 done
 javac --release 17 -Xlint:all -Werror -d /work/classes \
   /extension/src/org/opendefence/tak/auth/StrictFingerprintPolicy.java \
-  /extension/tests/StrictFingerprintPolicyTest.java
+  /extension/src/org/opendefence/tak/auth/StrictFingerprintHooks.java \
+  /extension/tests/StrictFingerprintPolicyTest.java \
+  /extension/tests/StrictFingerprintHooksTest.java
 java -ea -cp /work/classes StrictFingerprintPolicyTest
+java -ea -cp /work/classes org.opendefence.tak.auth.StrictFingerprintHooksTest

@@ -180,9 +180,13 @@ def main() -> None:
         "profile", choices=("config", "messaging", "api", "retention", "pm")
     )
     args = parser.parse_args()
-    if os.environ.get("TAK_AUTH_MODE", "legacy") != "legacy":
+    mode = os.environ.get("TAK_AUTH_MODE", "legacy")
+    if mode not in ("legacy", "strict") or (
+        mode == "strict"
+        and not Path("/opt/tak/lib/strict-fingerprint-agent.jar").is_file()
+    ):
         raise RuntimeError(
-            "Strict authentication injection is not implemented; legacy mode must be selected explicitly"
+            "Strict authentication injection is unavailable; select a supported mode"
         )
     os.umask(0o077)
     root = Path("/opt/tak")

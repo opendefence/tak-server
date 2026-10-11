@@ -49,6 +49,7 @@ COPY --from=unpack /opt/tak/takserver-pm.jar /tmp/takserver-pm.jar
 COPY --from=unpack /opt/tak/takserver.war /tmp/takserver.war
 COPY --from=unpack /opt/tak/db-utils/SchemaManager.jar /tmp/SchemaManager.jar
 COPY java /tmp/tak-launcher
+COPY extensions/strict-fingerprint/src /tmp/strict-fingerprint-src
 WORKDIR /tmp/tak-plugin-api
 RUN jar --extract --file /tmp/takserver-pm.jar BOOT-INF/classes BOOT-INF/lib \
     && javac --release 17 -cp '/tmp/tak-plugin-api/BOOT-INF/classes:/tmp/tak-plugin-api/BOOT-INF/lib/*' \
@@ -58,12 +59,22 @@ RUN jar --extract --file /tmp/takserver-pm.jar BOOT-INF/classes BOOT-INF/lib \
       -d /tmp/tak-launcher/classes /tmp/tak-launcher/ServerLauncher.java \
     && javac --release 17 -cp /tmp/SchemaManager.jar \
       -d /tmp/tak-launcher/classes /tmp/tak-launcher/SchemaUpgrade.java \
-    && jar --create --file /tmp/pvarki-launcher.jar -C /tmp/tak-launcher/classes .
+    && jar --create --file /tmp/pvarki-launcher.jar -C /tmp/tak-launcher/classes . \
+    && cp WEB-INF/lib/javassist-3.28.0-GA.jar /tmp/javassist.jar \
+    && mkdir -p /tmp/strict-fingerprint-classes \
+    && javac --release 17 -cp /tmp/javassist.jar -d /tmp/strict-fingerprint-classes \
+      /tmp/strict-fingerprint-src/org/opendefence/tak/auth/*.java \
+    && printf 'Premain-Class: org.opendefence.tak.auth.StrictFingerprintAgent\nClass-Path: javassist.jar\n' \
+      > /tmp/strict-fingerprint-manifest \
+    && jar --create --file /tmp/strict-fingerprint-agent.jar \
+      --manifest /tmp/strict-fingerprint-manifest -C /tmp/strict-fingerprint-classes .
 
 # Keep the distribution archive and build tools out of runtime layers.
 FROM deps AS install
 COPY --from=unpack /opt/tak /opt/tak
 COPY --from=plugin-launcher /tmp/pvarki-launcher.jar /opt/tak/lib/pvarki-launcher.jar
+COPY --from=plugin-launcher /tmp/strict-fingerprint-agent.jar /opt/tak/lib/strict-fingerprint-agent.jar
+COPY --from=plugin-launcher /tmp/javassist.jar /opt/tak/lib/javassist.jar
 COPY docker/entrypoint.sh /entrypoint.sh
 COPY scripts /opt/scripts
 COPY templates /opt/templates

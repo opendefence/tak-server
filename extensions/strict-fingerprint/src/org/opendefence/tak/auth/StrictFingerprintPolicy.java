@@ -17,7 +17,7 @@ import java.util.UUID;
 import javax.naming.NamingException;
 import javax.naming.ldap.LdapName;
 
-/** In-process policy for the adopted server change. This class is not wired into TAK. */
+/** In-process approval policy used by the strict admission agent. */
 public final class StrictFingerprintPolicy {
     private static final int MAX_ACCOUNTS = 1024;
     private static final int MAX_FINGERPRINTS = 32;
@@ -101,7 +101,7 @@ public final class StrictFingerprintPolicy {
         return current.revision();
     }
 
-    private static String commonName(X509Certificate leaf) throws CertificateException {
+    static String commonName(X509Certificate leaf) throws CertificateException {
         String name = null;
         try {
             for (var rdn : new LdapName(leaf.getSubjectX500Principal().getName()).getRdns()) {

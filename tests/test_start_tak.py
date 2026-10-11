@@ -42,10 +42,11 @@ class StartupTest(unittest.TestCase):
         with self.assertRaises(TimeoutError):
             start_tak.wait_for_configuration(self.data, timeout=0)
 
-    def test_strict_mode_cannot_silently_start_legacy_authentication(self) -> None:
+    def test_strict_mode_requires_the_agent_before_storage_changes(self) -> None:
         with (
             patch.dict(os.environ, TAK_AUTH_MODE="strict"),
             patch.object(sys, "argv", ["start_tak.py", "api"]),
+            patch.object(Path, "is_file", return_value=False),
             self.assertRaisesRegex(RuntimeError, "Strict authentication injection"),
         ):
             start_tak.main()

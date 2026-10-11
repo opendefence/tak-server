@@ -16,6 +16,7 @@ fi
 
 # Change to workdir
 cd ${TR}
+export TAK_PROFILE="$1"
 
 # This will set bunch of variables
 . ./setenv.sh
@@ -27,6 +28,9 @@ case "$1" in
     export JDK_JAVA_OPTIONS="${JDK_JAVA_OPTIONS} -Dloader.path=WEB-INF/lib-provided,WEB-INF/lib,WEB-INF/classes,file:lib/"
     ;;
 esac
+if [[ "${TAK_AUTH_MODE:-legacy}" == strict && ( "$1" == messaging || "$1" == api ) ]]; then
+    export JDK_JAVA_OPTIONS="${JDK_JAVA_OPTIONS} -Dopendefence.tak.role=$1 -javaagent:/opt/tak/lib/strict-fingerprint-agent.jar"
+fi
 
 # Start the right process
 if [ $1 = "messaging" ]; then
