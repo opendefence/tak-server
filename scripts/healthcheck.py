@@ -16,11 +16,13 @@ def check(
 ) -> None:
     """A shared Pod socket cannot prove that this container's JVM is alive."""
     start_tak.wait_for_configuration(root / "data", timeout=0)
-    if not any(
-        path.read_text().strip() == "java"
-        for path in proc.glob("[0-9]*/comm")
-        if path.is_file()
-    ):
+    for path in proc.glob("[0-9]*/comm"):
+        try:
+            if path.read_text().strip() == "java":
+                break
+        except FileNotFoundError:
+            continue
+    else:
         raise RuntimeError("The local TAK JVM is not running")
     if profile == "pm" and not (root / "runtime/pm/ready").exists():
         raise RuntimeError("The plugin application has not completed startup")
