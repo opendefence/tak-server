@@ -25,6 +25,10 @@ It installs the OpenDefence base package and a local CA, generates retained runt
 CI sets `TAK_TEST_IMAGE` to an existing Docker image ID. When set, `task image`
 retags and loads that exact image into Kind without rebuilding; a missing image
 fails the task. Ordinary local runs build the checkout with Docker or Podman.
+With Docker's containerd image store, the task saves only the image's platform
+and loads that archive into Kind. This avoids missing digests for other platforms.
+That path requires Docker API 1.48 or newer for `docker image save --platform`.
+Podman and Docker's classic image store keep the normal `kind load docker-image` path.
 The local `task tak` restarts the whole server Pod after Zarf applies so repeated runs pick up changed ConfigMaps and a rebuilt image with the same local tag.
 The local Zarf deployment uses a ClusterIP Service because Kind has no load balancer; the normal standalone package defaults to LoadBalancer. Use `kubectl --kubeconfig outputs/local/kubeconfig -n tak-server port-forward svc/tak-server 8443:8443` for local access. The test CA and admin probe identity are for this disposable cluster only.
 `mise exec -- task --yes down` deletes that cluster, including its database and identities. It does not target other Kind clusters.

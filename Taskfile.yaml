@@ -82,7 +82,18 @@ tasks:
           echo 'Start Docker or Podman before building the image' >&2
           exit 1
         fi
-      - kind load docker-image --name {{.TAK_CLUSTER_NAME | shellQuote}} {{.TAK_IMAGE | shellQuote}}
+      - |
+        set -eu
+        if docker info --format '{{`{{json .DriverStatus}}`}}' 2>/dev/null | grep -q io.containerd.snapshotter.v1; then
+          # Docker's containerd store can export references to absent platforms.
+          platform=$(docker image inspect --format '{{`{{.Os}}/{{.Architecture}}`}}' {{.TAK_IMAGE | shellQuote}})
+          archive=$(mktemp)
+          trap 'rm -f "$archive"' EXIT
+          docker image save --platform "$platform" --output "$archive" {{.TAK_IMAGE | shellQuote}}
+          kind load image-archive --name {{.TAK_CLUSTER_NAME | shellQuote}} "$archive"
+        else
+          kind load docker-image --name {{.TAK_CLUSTER_NAME | shellQuote}} {{.TAK_IMAGE | shellQuote}}
+        fi
 
   tak:
     desc: Deploy the standalone Zarf candidate with the local image

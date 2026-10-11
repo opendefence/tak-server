@@ -26,7 +26,7 @@ class WorkflowReleaseTest(unittest.TestCase):
         taskfile = (Path(__file__).resolve().parents[1] / "Taskfile.yaml").read_text()
         task = taskfile.split("  image:\n", 1)[1].split("  tak:\n", 1)[0]
         script = textwrap.dedent(
-            task.split("      - |\n", 1)[1].split("      - kind ", 1)[0]
+            task.split("      - |\n", 1)[1].split("      - ", 1)[0]
         ).replace("{{.TAK_IMAGE | shellQuote}}", "localhost/tak-server:local")
         stub = r"""
         docker() {
@@ -70,6 +70,79 @@ class WorkflowReleaseTest(unittest.TestCase):
                     self.assertIn(
                         "buildx build --load -t localhost/tak-server:local .", commands
                     )
+
+    def test_kind_imports_only_the_tested_platform(self) -> None:
+        taskfile = (Path(__file__).resolve().parents[1] / "Taskfile.yaml").read_text()
+        task = taskfile.split("  image:\n", 1)[1].split("  tak:\n", 1)[0]
+        script = textwrap.dedent(task.split("      - ", 2)[2].removeprefix("|\n"))
+        script = script.replace(
+            "{{.TAK_IMAGE | shellQuote}}", "localhost/tak-server:local"
+        )
+        script = script.replace("{{.TAK_CLUSTER_NAME | shellQuote}}", "test-cluster")
+        stub = r"""
+        docker() {
+          printf '%q ' "$@" >> "$COMMAND_LOG"
+          printf '\n' >> "$COMMAND_LOG"
+          case "$1 ${2:-}" in
+            'info --format')
+              if [ "$PROVIDER" = containerd ]; then
+                printf '%s\n' '[["driver-type","io.containerd.snapshotter.v1"]]'
+              fi ;;
+            'image inspect')
+              [ "$FAIL_COMMAND" != inspect ] || return 1
+              printf '%s\n' "$IMAGE_PLATFORM" ;;
+            'image save')
+              [ "$FAIL_COMMAND" != save ] || return 1
+              [ "$3" = --platform ] && [ "$4" = "$IMAGE_PLATFORM" ] || return 1
+              [ "$5" = --output ] && [ "$7" = localhost/tak-server:local ] || return 1
+              printf '%s\n' "$IMAGE_PLATFORM" > "$6" ;;
+          esac
+        }
+        kind() {
+          printf '%q ' "$@" >> "$COMMAND_LOG"
+          printf '\n' >> "$COMMAND_LOG"
+          [ "$3 $4" = '--name test-cluster' ] || return 1
+          if [ "$PROVIDER" != containerd ]; then
+            [ "$2 $5" = 'docker-image localhost/tak-server:local' ]
+          else
+            # Unfiltered multi-platform exports reproduce the missing-digest failure.
+            [ "$2" = image-archive ] && [ "$(cat "$5")" = "$IMAGE_PLATFORM" ] || return 1
+            [ "$FAIL_COMMAND" != load ]
+          fi
+        }
+        """
+        for provider, platform, failure in (
+            ("containerd", "linux/amd64", ""),
+            ("containerd", "linux/arm64", ""),
+            ("containerd", "linux/amd64", "inspect"),
+            ("containerd", "linux/amd64", "save"),
+            ("containerd", "linux/amd64", "load"),
+            ("classic", "linux/amd64", ""),
+            ("Podman", "linux/arm64", ""),
+        ):
+            with (
+                self.subTest(provider=provider, platform=platform, failure=failure),
+                tempfile.TemporaryDirectory(prefix="kind import ") as tmp,
+            ):
+                log = Path(tmp) / "commands"
+                result = subprocess.run(
+                    ["bash", "-ec", textwrap.dedent(stub) + script],
+                    env={
+                        **os.environ,
+                        "TMPDIR": tmp,
+                        "COMMAND_LOG": str(log),
+                        "PROVIDER": provider,
+                        "IMAGE_PLATFORM": platform,
+                        "FAIL_COMMAND": failure,
+                    },
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(result.returncode == 0, not failure, result.stderr)
+                commands = [shlex.split(line) for line in log.read_text().splitlines()]
+                if failure in {"inspect", "save"}:
+                    self.assertFalse(any(cmd[0] == "load" for cmd in commands))
+                self.assertEqual(list(Path(tmp).iterdir()), [log])
 
     def test_zarf_publishing(self) -> None:
         workflow = (
