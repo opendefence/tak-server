@@ -141,6 +141,7 @@ Its TAK resources, CNPG Cluster/database/identity Secrets, schema Job, and PVC m
 there by the installer. The overlay allows the sibling's `app: integration-tak-operator`
 Pod to reach Ignite; it does not deploy the operator or grant it TAK Secret access.
 The sibling API and operator manifests are managed in their own repository.
+For strict-mode REST access, the operator creates `tak-integration-admin` with its public `tls.crt`, uses a certificate chaining to TAK's client truststore, and registers that certificate as a TAK administrator through JNI. The integrated overlay projects this optional Secret into the API container only. Until it is present, strict HTTP admission denies the integration certificate. Replacing the Secret changes the exact pinned leaf without a server restart; the new leaf must also be registered through JNI. This path does not bypass TAK's REST authorization.
 The integrated overlay is still a legacy-authentication candidate until strict
 admission and the management contract pass their acceptance checks.
 

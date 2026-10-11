@@ -1,6 +1,10 @@
 package org.opendefence.tak.auth;
 
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.cert.CertificateFactory;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Clock;
@@ -34,9 +38,29 @@ public final class StrictFingerprintHooks {
             Object value = call(request, "getAttribute", String.class,
                     "jakarta.servlet.request.X509Certificate");
             if (!(value instanceof X509Certificate[] chain) || chain.length == 0) return false;
-            require((String) call(authentication, "getName"), chain[0]);
-            return true;
+            String accountId = (String) call(authentication, "getName");
+            try {
+                require(accountId, chain[0]);
+                return true;
+            } catch (SecurityException denied) {
+                return integrationAdmin(accountId, chain[0]);
+            }
         } catch (RuntimeException denied) {
+            return false;
+        }
+    }
+
+    private static boolean integrationAdmin(String accountId, X509Certificate leaf) {
+        String configured = System.getProperty("opendefence.tak.integrationAdminCertificate");
+        if (configured == null || configured.isBlank()) return false;
+        try (var input = Files.newInputStream(Path.of(configured))) {
+            var trusted = (X509Certificate) CertificateFactory.getInstance("X.509")
+                    .generateCertificate(input);
+            leaf.checkValidity();
+            return leaf.getBasicConstraints() < 0
+                    && accountId.equals(StrictFingerprintPolicy.commonName(leaf))
+                    && MessageDigest.isEqual(leaf.getEncoded(), trusted.getEncoded());
+        } catch (Exception unavailable) {
             return false;
         }
     }

@@ -73,6 +73,26 @@ public final class StrictFingerprintHooksTest {
         if (StrictFingerprintHooks.http(new Request(null), new Authentication(USER))) {
             throw new AssertionError("Cached principal without client certificate allowed");
         }
+        String setting = "opendefence.tak.integrationAdminCertificate";
+        System.setProperty(setting, Path.of("unapproved.pem").toAbsolutePath().toString());
+        try {
+            if (!StrictFingerprintHooks.http(new Request(new X509Certificate[] {other}),
+                    new Authentication(USER))) throw new AssertionError("Pinned integration admin denied");
+            if (StrictFingerprintHooks.http(new Request(new X509Certificate[] {other}),
+                    new Authentication("different"))) throw new AssertionError("Mismatched admin principal allowed");
+            denies(() -> StrictFingerprintHooks.messaging(unapproved));
+        } finally {
+            System.clearProperty(setting);
+        }
+        if (StrictFingerprintHooks.http(new Request(new X509Certificate[] {other}),
+                new Authentication(USER))) throw new AssertionError("Admin certificate allowed without pin");
+        System.setProperty(setting, Path.of("missing.pem").toAbsolutePath().toString());
+        try {
+            if (StrictFingerprintHooks.http(new Request(new X509Certificate[] {other}),
+                    new Authentication(USER))) throw new AssertionError("Missing admin certificate allowed");
+        } finally {
+            System.clearProperty(setting);
+        }
         policy.invalidate();
         denies(() -> StrictFingerprintHooks.messaging(approved));
         if (StrictFingerprintHooks.http(new Request(new X509Certificate[] {main}),

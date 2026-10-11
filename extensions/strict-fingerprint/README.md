@@ -17,6 +17,7 @@ It accepts only an exact leaf SHA-256 fingerprint and an exact, single certifica
 It rejects repeated attribute types inside a CN-containing relative distinguished name (RDN).
 It checks leaf validity and rejects CA certificates.
 The caller must already have validated the TLS certificate chain and client-certificate usage.
+In the integrated overlay, the API JVM can also admit the exact certificate in the integration-owned `tak-integration-admin/tls.crt` Secret. This permits the separate operator to use TAK's existing 8443 REST API after it registers the certificate as an administrator through JNI. The issuer must be trusted by TAK's client truststore. The exception is absent from messaging and does not grant a vendor role by itself; Spring/TAK authorization still runs. Missing or malformed Secret data denies this path.
 
 Each update replaces one account's complete accepted set. Reads see one immutable snapshot.
 Updates require the current revision. Exactly one competing update can use that revision.

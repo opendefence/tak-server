@@ -131,6 +131,7 @@ components:
             wait:
               cluster: {kind: job, name: tak-grants-5-8-92, namespace: integration-tak, condition: complete}
   - name: integrated-server
+    description: Integration supplies tak-integration-admin/tls.crt and JNI admin registration for strict HTTPS access
     required: true
     only: {flavor: integrated}
     images:

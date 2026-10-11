@@ -30,6 +30,9 @@ case "$1" in
 esac
 if [[ "${TAK_AUTH_MODE:-legacy}" == strict && ( "$1" == messaging || "$1" == api ) ]]; then
     export JDK_JAVA_OPTIONS="${JDK_JAVA_OPTIONS} -Dopendefence.tak.role=$1 -javaagent:/opt/tak/lib/strict-fingerprint-agent.jar"
+    if [[ "$1" == api ]]; then
+        export JDK_JAVA_OPTIONS="${JDK_JAVA_OPTIONS} -Dopendefence.tak.integrationAdminCertificate=/identities/integration-admin/tls.crt"
+    fi
 fi
 
 # Start the right process
