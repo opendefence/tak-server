@@ -1,18 +1,37 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
+  name: tak-federation-issuer
+spec:
+  isCA: true
+  commonName: tak-federation-issuer
+  secretName: tak-federation-issuer # pragma: allowlist secret
+  privateKey: {algorithm: RSA, size: 2048}
+  usages: [cert sign, crl sign]
+  issuerRef: {kind: ClusterIssuer, name: public-issuer}
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: tak-federation-issuer
+spec:
+  ca: {secretName: tak-federation-issuer} # pragma: allowlist secret
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
   name: tak-cot-identity
 spec:
   secretName: tak-cot-identity # pragma: allowlist secret
   commonName: tak.localtest.me
   dnsNames: [tak.localtest.me]
   privateKey: {algorithm: RSA, size: 2048}
-  usages: [digital signature, key encipherment, server auth]
+  usages: [digital signature, key encipherment, server auth, client auth]
   keystores:
     jks:
       create: true
       passwordSecretRef: {name: tak-store-passwords, key: cot-password}
-  issuerRef: {kind: ClusterIssuer, name: public-issuer}
+  issuerRef: {kind: Issuer, name: tak-federation-issuer}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate

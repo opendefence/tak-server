@@ -54,13 +54,18 @@ The grants Job gives the runtime account data access after the schema Job comple
 | `tak-database-app` | `host`, `dbname`, `username`, `password` | CNPG-generated schema connection and server endpoint. |
 | `tak-database-runtime` | `username`, `password` | Generated basic-auth Secret consumed by the CNPG-managed runtime role. |
 | `tak-store-passwords` | `cot-password`, `https-password`, `trust-password` | Installation-generated passwords matching the supplied stores. |
-| `tak-cot-identity` | `keystore.jks` | RSA CoT/JWT private-key entry. |
+| `tak-cot-identity` | `keystore.jks` | RSA CoT/JWT and federation private-key entry. Require both server and client authentication usages. |
 | `tak-https-identity` | `keystore.jks`, `ca.crt` | Separate HTTPS identity and public outbound CA bundle. |
 | `tak-client-trust` | `truststore.jks` | CoT client trust. |
 | `tak-federation-bootstrap` | `truststore.jks` | Initial federation trust, used only when persistent trust is absent. |
 | `tak-probe-identity` | `tls.crt`, `tls.key`, `ca.crt` | Client certificate, unencrypted client key, and HTTPS server CA bundle for authenticated probes. |
 
 Use issuer-managed or supplied native JKS stores. The tested cert-manager private-key alias is `certificate`.
+The CoT identity also authenticates federation connections in both directions.
+Its JKS key entry must include the leaf and an issuer certificate in its chain.
+TAK 5.8.92 cannot federate with a leaf-only chain.
+The local manifests use an intermediate CA for this identity because cert-manager omits root certificates from identity chains.
+The intermediate CA key stays in its own Secret and is not mounted by TAK Pods.
 Match `TAK_SERVER_ADDRESS` to the served HTTPS certificate's DNS name.
 The probe certificate must be trusted for client authentication. The bootstrap Job registers it as an administrator through UserManager.
 This is the standalone legacy bootstrap path; it does not populate strict approvals.
