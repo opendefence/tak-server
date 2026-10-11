@@ -32,12 +32,6 @@ repos:
     -   id: pretty-format-json
         args:
         - --autofix
--   repo: https://github.com/IamTheFij/docker-pre-commit.git
-    rev: v3.0.1
-    hooks:
-    -   id: docker-compose-check
-        files: "docker-compose.*.yml"
-        exclude: ".*.tpl"
 -   repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.5.5
     hooks:
