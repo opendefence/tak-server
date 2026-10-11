@@ -1,6 +1,7 @@
 # CI migration
 
 Workflow callers now pin checkout, uv, prek, and shared CI actions to commit IDs.
+Both checks jobs run the strict fingerprint policy and hook tests in a pinned JDK container.
 The shared publishing action derives the registry owner from `GITHUB_REPOSITORY_OWNER`.
 In this repository, it targets `ghcr.io/opendefence/tak-server`.
 Docker Hub and ACR inputs are omitted.
@@ -42,7 +43,9 @@ Main runs are serialized so a later run cannot move the release tag while the
 current run resolves its digest.
 
 The publishing job pulls that digest and runs the Python, strict-agent, vendor
-launcher, federation truststore, and HTTPS keystore checks. It then lints both
+launcher, and HTTPS keystore checks. The Python suite checks native federation
+trust initialization and preservation. The launcher check needs a local network
+address for UserManager. Its container uses Docker's default network. The job lints both
 Zarf flavors with the digest. The successful job exposes it as the `tak-image`
 output and prints it in the workflow summary. Following the `base` repository's
 publishing workflow, it creates both Zarf flavors for AMD64 and ARM64, signs each
@@ -98,8 +101,17 @@ override is removed. An image derived from that published candidate with the
 updated image environment and launcher applied all 101 migrations successfully
 to a fresh disposable database. The direct-Java regression check failed on the
 published image and passed on the patched image, together with the launcher
-checks. The test Job and database were removed. A full rebuilt ARC deployment
-still needs a new run after the user pushes the TLS fix.
-Integrated acceptance and offline deployment of published Zarf packages remain open.
+checks. The test Job and database were removed.
+
+PR run [38156176895](https://github.com/opendefence/tak-server/actions/runs/38156176895)
+passed checks, image publication, and a fresh native standalone deployment on ARC.
+The schema and grants Jobs completed. All three server roles became ready.
+The authenticated HTTPS smoke check returned HTTP 200.
+PR run [38157324325](https://github.com/opendefence/tak-server/actions/runs/38157324325)
+also passed native validation. It built both standalone archives and uploaded the
+[`tak-server-standalone` artifact](https://github.com/opendefence/tak-server/actions/runs/38157324325/artifacts/11709296583).
+The archives contain the published image for each architecture.
+The runtime smoke check covers the runner's architecture.
+
+Integrated acceptance, main Zarf publication, and offline deployment remain open.
 No Snyk job was added.
-No workflow, image, or release was published from this session.

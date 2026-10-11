@@ -49,5 +49,9 @@ into Kind. Pull-request CI validates the same disposable native deployment.
 
 The Python and image checks are documented in `k8s/README.md <k8s/README.md>`_.
 The pinned strict-agent check is ``sh tests/test-strict-agent.sh IMAGE``.
-Publishing remains disabled until the acceptance gates in the implementation
-plan pass.
+CI also runs the strict fingerprint policy and hook tests.
+Same-repository pull requests publish candidate images. Successful native checks
+produce standalone Zarf downloads for AMD64 and ARM64. Main publishes images and
+signed Zarf packages. See `docs/ci-migration.md <docs/ci-migration.md>`_ for the
+workflow rules. These candidates still require the remaining acceptance gates
+in the implementation plan.
