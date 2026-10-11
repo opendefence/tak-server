@@ -18,7 +18,7 @@ With Docker or Podman running::
     mise exec -- task --yes status
     mise exec -- task --yes smoke
 
-The Taskfile creates a disposable Kind cluster, installs the platform operators,
+The Taskfile creates a disposable Kind cluster, installs the OpenDefence base package,
 CNPG/PostGIS, generated password Secrets and cert-manager JKS identities, then
 deploys TAK through Zarf. ``smoke`` requires a ready server and authenticated
 HTTPS 200. ``mise exec -- task --yes down`` deletes only this test cluster and

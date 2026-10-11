@@ -27,7 +27,7 @@ tasks:
     cmds: [task --list]
 
   up:
-    desc: Start an isolated Kind cluster with base operators and standalone TAK
+    desc: Start an isolated Kind cluster with the base package and standalone TAK
     preconditions:
       - sh: test "${KUBECONFIG:-}" = {{printf "%s/outputs/local/kubeconfig" .ROOT_DIR | shellQuote}}
         msg: KUBECONFIG must point at this Taskfile's isolated local kubeconfig
@@ -44,7 +44,7 @@ tasks:
       - task: smoke
 
   platform:
-    desc: Install the pinned OpenDefence base operators
+    desc: Install the pinned OpenDefence base package
     cmds:
       - test "$(kubectl config current-context)" = {{.TAK_KUBE_CONTEXT | shellQuote}}
       - zarf --architecture amd64 package deploy {{.BASE_PACKAGE | shellQuote}} --connected --confirm --set-values issuer.type=ca

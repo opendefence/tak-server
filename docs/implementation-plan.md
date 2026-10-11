@@ -22,7 +22,7 @@ All server behavior changes must use external launchers or runtime injections ag
 This constraint supersedes the matching-source prerequisite in the imported handoff and earlier plans.
 
 Use one Pod with separate config, messaging, and API containers. Plugin manager is optional in the same Pod.
-Keep the integration JNI/operator process in a separate Pod with its own Ignite profile.
+Keep the `tak-operator` JNI process in a separate Pod with its own Ignite profile.
 Deploy both Pods in the `integration-tak` namespace owned by the sibling integration manifests.
 The server's integrated overlay must not create another namespace or own the sibling's workloads.
 These decisions supersede the original separate-Pod server requirement.
@@ -102,7 +102,7 @@ Implement each coherent slice in small reviewed commits. Test injection seams ag
 ### 1. Package the proven Pod and storage layout
 
 - [ ] Create one versioned Kustomize base and standalone/integrated overlays using ordinary OCI builds, Java 17, and the actual Python 3.12 runtime.
-- [x] Add a namespace-neutral server base and an integrated overlay targeting the sibling operator's namespace. Its NetworkPolicy admits the operator Pod to Ignite. Strict-mode acceptance and a pinned production image remain open.
+- [x] Add a namespace-neutral server base and an integrated overlay targeting `integration-tak`, created by the sibling integration manifests. Its NetworkPolicy admits the `tak-operator` Pod to Ignite. Strict-mode acceptance and a pinned production image remain open.
 - [x] Add Zarf standalone/integrated flavors with deploy-time parameters for public native environment inputs and ordered schema/grants/server components. Read PostgreSQL connection/migration values from CNPG's generated application Secret; consume a separate CNPG-managed runtime role Secret and installation-generated store-password Secret. Keep the package aligned with overlay changes. A connected local-image standalone Zarf deployment passed; building an offline package from a published digest remains open.
 - [ ] Wire installation-owned one-time generation and retention for the CNPG runtime role password Secret and JKS store-password Secret, followed by issuer-managed JKS issuance. Keep values out of Zarf parameters and preserve them on redeploy/renewal; validate CNPG role and privilege grants before declaring either flavor self-contained.
 - [x] Correct the 64 MiB Ignite cache maximum to the tested 256 MiB value. Recheck CoT from the rendered native base, then remove the experimental live override.
@@ -155,7 +155,7 @@ Then test password and trust rotation, automatic issuer renewal, and the actual 
 - [x] Implement an external launcher/extension for messaging and API. The agent pins the vendor tuple and transformed class bytes, verifies both classloader paths before TAK startup, and fails closed on missing/incompatible injection. Live negative CoT/HTTP checks passed; approved-client and revocation acceptance remain below.
 - [x] Add explicit `TAK_AUTH_MODE` startup validation outside the vendor CoreConfig schema. A missing/incompatible agent fails strict startup; empty, invalidated, or restarted approval state denies access without a legacy fallback. Keep separate future management settings outside the vendor schema.
 - [ ] Expose a trusted complete-set update for one UUID's approved leaf fingerprints, explicit deadline, and conditional revision. Provide immutable readback and clear conflicts, failures, and limit errors.
-- [x] Permit the separate integration operator's exact mTLS leaf through strict HTTP admission when its public certificate is supplied by `tak-integration-admin/tls.crt`. Its issuer must already be in TAK client trust, and integration must register that leaf as an administrator through JNI. The exception applies only to the API JVM; TAK's REST authorization still decides access. The certificate alone is not the approval-management endpoint.
+- [x] Permit the `tak-operator`'s exact mTLS leaf through strict HTTP admission when its public certificate is supplied by `tak-integration-admin/tls.crt`. Its issuer must already be in TAK client trust, and the `tak-operator` must register that leaf as an administrator through JNI. The exception applies only to the API JVM; TAK's REST authorization still decides access. The certificate alone is not the approval-management endpoint.
 - [ ] Use that same mTLS identity on the existing 8443 REST service for the strict projection update/readback endpoint. Authorize its exact pinned leaf and administrator registration there; keep both-JVM application and acknowledgement explicit. No separate management listener or bootstrap credential is needed.
 - [ ] Accept installed integration identities on whichever TAK interface their manifests require, including 8443 REST and 8089 CoT. Installing the integration Zarf package is the authorization event; do not add a separate approval workflow or put integrations in the user UUID approval set. Project the current installed-manifest identity/certificate inventory to both JVMs with readback and a freshness bound. Match the authenticated certificate to the manifest's integration identity and issuer plus serial (and exact leaf when available); a serial alone or a naming prefix is insufficient. Remove access when the manifest is removed or its credential changes. Keep TAK's existing role and endpoint authorization after admission.
 - [ ] Apply and acknowledge the projection in both messaging and API JVMs. Bind permission and credential readback to the requested projection; preserve roles, groups, and the UUID account when one leaf is removed. Resolve uncertain writes by readback before retry.
@@ -190,7 +190,7 @@ Client preferences and a `client-update-required` outcome belong to integration.
 
 ### 6. Complete standalone operation, CI, and cleanup
 
-- [ ] Provide Kind/existing-cluster standalone overlays and a narrow legacy-authentication admin bootstrap Job without Core, RMAPI, integration CRDs/operator, or sibling checkouts. Do not add standalone fingerprint approvals.
+- [ ] Provide Kind/existing-cluster standalone overlays and a narrow legacy-authentication admin bootstrap Job without Core, RMAPI, integration CRDs, `tak-operator`, or sibling checkouts. Do not add standalone fingerprint approvals.
 - [x] Add a local Taskfile using the pinned `opendefence/base` Kind task. In the disposable standalone cluster, generate passwords through ESO, create the CNPG/PostGIS database and managed runtime role, issue JKS identities through cert-manager, deploy with Zarf, and require an authenticated HTTPS smoke check. Production issuer/retention/adoption remain open; strict-mode acceptance belongs to integrated deployment.
 - [ ] Expose appropriate CoT/federation TCP services and preserve TAK `/Marti` mTLS semantics separately from `/integrations/tak/api/v1`.
 - [ ] Finish native replacement checks after removing Compose deployment, obsolete OSS build, RM bootstrap, duplicate user/ZIP wrappers, and Azure/DevSpace paths. Retain `build_compose.yml` for distribution builds, optional pinned APK/update content, and historical LFS data.

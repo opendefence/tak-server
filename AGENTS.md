@@ -30,8 +30,9 @@ for remaining work. `build_compose.yml` remains for distribution builds.
   Services, and network policy. Config, messaging, and API share one Pod and
   Ignite network identity.
 - `k8s/overlays/standalone` uses namespace `tak-server`.
-  `k8s/overlays/integrated` targets the sibling operator's `integration-tak`
-  namespace and does not create it.
+  `k8s/overlays/integrated` targets `integration-tak`, created by the sibling
+  integration manifests, and permits the `tak-operator` Pod to reach Ignite.
+  Its current Kubernetes Deployment is named `integration-tak-operator`.
 - CloudNativePG owns PostgreSQL and its generated application Secret. A separate
   CNPG-managed runtime role consumes a generated password Secret.
 - cert-manager issues the local test JKS identities. Matching store passwords
@@ -53,15 +54,20 @@ LoadBalancer.
 3. Keep vendor WAR/JAR bytes unchanged. Verify every external injection against
    the selected release. The candidate explicitly uses legacy authentication;
    selecting strict mode currently stops startup.
-4. The integrated deployment belongs in the `integration-tak` namespace. Its
-   operator and API live in the sibling repository; this repo does not install
-   them or grant them TAK Secret access.
+4. The integrated deployment belongs in the `integration-tak` namespace. The
+   `tak-operator` and integration API live in the sibling repository; this repo
+   does not install them or grant them TAK Secret access.
 5. The user/admin wrappers, client-ZIP generator, Compose initializer, and
    `makeCert` have been removed. Do not add callers to distribution certificate
    helpers.
+6. Name each operator explicitly in prose: `core-operator` (not present in this
+   TAK deployment yet), `tak-operator` (currently `integration-tak-operator` in
+   Kubernetes), `mediamtx-operator`, CloudNativePG operator, or External Secrets
+   Operator. Avoid bare "operator" or "sibling operator" when a specific component
+   is meant. Say "administrator" when referring to a person.
 
 ## Related repositories
 
-- [OpenDefence base](https://github.com/opendefence/base): platform operators and local cluster tasks.
-- [OpenDefence core](https://github.com/opendefence/core): platform API, operator, and CRDs.
-- [OpenDefence integration-tak](https://github.com/opendefence/integration-tak): TAK integration API, operator, and client packages.
+- [OpenDefence base](https://github.com/opendefence/base): platform components and local cluster tasks.
+- [OpenDefence core](https://github.com/opendefence/core): platform API, `core-operator`, and CRDs.
+- [OpenDefence integration-tak](https://github.com/opendefence/integration-tak): TAK integration API, `tak-operator`, and client packages.

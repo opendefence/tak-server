@@ -5,7 +5,7 @@ Use ConfigMaps and Secrets for deployment inputs.
 Reuse `scripts/coreconfig.py` to merge those inputs into the saved state before the configuration service starts.
 Only the config service uses the persistent CoreConfig as its local file.
 Other roles use private, writable bootstrap copies and receive runtime configuration through Ignite.
-No new operator or synchronization sidecar is needed.
+No new Kubernetes controller or synchronization sidecar is needed.
 
 The user selected one Pod with separate role containers.
 The [T1 follow-up](t1-single-pod-findings.md) verifies admin persistence with private follower files in that topology.

@@ -21,7 +21,7 @@ mise exec -- task --yes smoke
 ```
 
 `up` creates `tak-server-local` and writes its kubeconfig to `outputs/local/kubeconfig`.
-It installs the base operators and a local CA, generates retained runtime/JKS password Secrets with External Secrets Operator, starts CNPG/PostGIS, issues JKS identities with cert-manager, builds and loads the current image, then deploys the standalone Zarf components. The final smoke check requires a ready StatefulSet and HTTP 200 from an authenticated `/Marti` read.
+It installs the OpenDefence base package and a local CA, generates retained runtime/JKS password Secrets with External Secrets Operator, starts CNPG/PostGIS, issues JKS identities with cert-manager, builds and loads the current image, then deploys the standalone Zarf components. The final smoke check requires a ready StatefulSet and HTTP 200 from an authenticated `/Marti` read.
 The local `task tak` restarts the whole server Pod after Zarf applies so repeated runs pick up changed ConfigMaps and a rebuilt image with the same local tag.
 The local Zarf deployment uses a ClusterIP Service because Kind has no load balancer; the normal standalone package defaults to LoadBalancer. Use `kubectl --kubeconfig outputs/local/kubeconfig -n tak-server port-forward svc/tak-server 8443:8443` for local access. The test CA and admin probe identity are for this disposable cluster only.
 `mise exec -- task --yes down` deletes that cluster, including its database and identities. It does not target other Kind clusters.
@@ -80,7 +80,7 @@ zarf package deploy zarf-package-tak-server-*.tar.zst
 
 For the integrated flavor, use `--flavor integrated` at creation. Apply the sibling
 `integration-tak` deployment first; it owns that namespace. The integrated Zarf
-package installs TAK resources there and does not install the sibling operator.
+package installs TAK resources there and does not install the `tak-operator`.
 For standalone Zarf deployment, create namespace `tak-server` and install its
 CNPG Cluster and identity/credential Secrets before deploying the package.
 
@@ -140,10 +140,11 @@ Keep passwords and rendered XML out of ConfigMaps.
 The integrated overlay targets the `integration-tak` namespace created by the sibling
 `integration-tak/k8s/integration` deployment. It does not create or own that namespace.
 Its TAK resources, CNPG Cluster/database/identity Secrets, schema Job, and PVC must all be placed
-there by the installer. The overlay allows the sibling's `app: integration-tak-operator`
-Pod to reach Ignite; it does not deploy the operator or grant it TAK Secret access.
-The sibling API and operator manifests are managed in their own repository.
-For strict-mode REST access, the operator creates `tak-integration-admin` with its public `tls.crt`, uses a certificate chaining to TAK's client truststore, and registers that certificate as a TAK administrator through JNI. The integrated overlay projects this optional Secret into the API container only. Until it is present, strict HTTP admission denies the integration certificate. Replacing the Secret changes the exact pinned leaf without a server restart; the new leaf must also be registered through JNI. This path does not bypass TAK's REST authorization.
+there by the installer. The overlay allows the `tak-operator` Pod (labelled
+`app: integration-tak-operator`) to reach Ignite; it does not deploy the
+`tak-operator` or grant it TAK Secret access.
+The sibling API and `tak-operator` manifests are managed in their own repository.
+For strict-mode REST access, the `tak-operator` creates `tak-integration-admin` with its public `tls.crt`, uses a certificate chaining to TAK's client truststore, and registers that certificate as a TAK administrator through JNI. The integrated overlay projects this optional Secret into the API container only. Until it is present, strict HTTP admission denies the integration certificate. Replacing the Secret changes the exact pinned leaf without a server restart; the new leaf must also be registered through JNI. This path does not bypass TAK's REST authorization.
 This is the TAK integration's installed identity, not a separate approval. General installed-integration identities for 8443 or 8089 require the Core IntegrationManifest identity and certificate-status contract; they are not yet accepted by this overlay.
 The integrated overlay is still a legacy-authentication candidate until strict
 admission and the management contract pass their acceptance checks.
@@ -171,7 +172,7 @@ Back up the database before any upgrade.
 Inspect the Job logs and schema history before starting the server.
 An existing database without Flyway history needs a separate reviewed migration.
 The repository's legacy SQL dump has V7 and V9 checksum mismatches with this release.
-The Job rejects it until an operator reviews and reconciles those exact history rows.
+The Job rejects it until an administrator reviews and reconciles those exact history rows.
 The disposable dump upgrade passed after that step. A new Job also resumed after the first Job stopped at a blocked V98 migration.
 A production data upgrade and other interruption modes still need tests.
 
@@ -184,7 +185,7 @@ The runtime role must not own the schema, have `CREATE` on it, or inherit
 The disposable test runtime role could read a TAK table and could not create a table.
 
 The standalone overlay creates namespace `tak-server` and a TCP LoadBalancer Service.
-It requires the CNPG Cluster and Secrets above. It has no Core, RMAPI, integration operator, or sibling-checkout dependency.
+It requires the CNPG Cluster and Secrets above. It has no Core, RMAPI, `tak-operator`, or sibling-checkout dependency.
 The Kind overlay uses ClusterIP services; use port forwarding for local traffic tests.
 
 ```sh
@@ -208,7 +209,7 @@ Do not treat these thresholds as a service restoration guarantee; scheduling, te
 Use `scripts/restart-kubernetes.sh namespace` for coordinated Pod replacement. It reports failure after a 300-second rollout wait.
 
 The base permits CoT, HTTPS, and federation ingress. It restricts Ignite ingress to same-namespace TAK-labelled Pods.
-The integrated overlay also permits the sibling's operator-labelled Pod to reach Ignite. The base does not restrict egress.
+The integrated overlay also permits the `tak-operator` Pod to reach Ignite. The base does not restrict egress.
 Kind policy objects are not evidence of enforcement by a production CNI.
 Expose extra administrator-created listeners through additional Service and NetworkPolicy entries.
 Keep `/Marti` TLS client authentication intact when adding external routing.
