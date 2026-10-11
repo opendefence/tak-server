@@ -24,8 +24,6 @@ total_kib=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
 : "${RETENTION_MAX_HEAP:=$((total_kib / 30000))}"
 : "${PLUGIN_MANAGER_MAX_HEAP:=$((total_kib / 30000))}"
 
-# The vendor script forces TLS 1.2 for outbound clients; CNPG can require TLS 1.3.
-export JDK_JAVA_OPTIONS="${JDK_JAVA_OPTIONS:-} -Djdk.tls.client.protocols=TLSv1.3,TLSv1.2"
 case "$1" in
   config|messaging|api)
     export LOADER_MAIN=org.opendefence.tak.ServerLauncher

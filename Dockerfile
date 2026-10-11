@@ -63,8 +63,9 @@ RUN jar --extract --file /tmp/takserver-pm.jar BOOT-INF/classes BOOT-INF/lib \
 
 # Keep the distribution archive and build tools out of runtime layers.
 FROM deps AS install
+# CNPG requires TLS 1.3; retain TLS 1.2 for existing TAK peers.
 ENV IGNITE_HOME=/opt/tak \
-    JDK_JAVA_OPTIONS="-Dio.netty.tmpdir=/opt/tak -Djava.io.tmpdir=/opt/tak -Dio.netty.native.workdir=/opt/tak -Djava.net.preferIPv4Stack=true -Djava.security.egd=file:/dev/./urandom -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_QUIET=true -Djdk.tls.client.protocols=TLSv1.2 \
+    JDK_JAVA_OPTIONS="-Dio.netty.tmpdir=/opt/tak -Djava.io.tmpdir=/opt/tak -Dio.netty.native.workdir=/opt/tak -Djava.net.preferIPv4Stack=true -Djava.security.egd=file:/dev/./urandom -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_QUIET=true -Djdk.tls.client.protocols=TLSv1.3,TLSv1.2 \
 --add-opens=java.base/sun.security.pkcs=ALL-UNNAMED \
 --add-opens=java.base/sun.security.pkcs10=ALL-UNNAMED \
 --add-opens=java.base/sun.security.util=ALL-UNNAMED \

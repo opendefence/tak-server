@@ -72,7 +72,25 @@ Kind node. The fixture image and daemon were removed after the check.
 Regression tests cover AMD64/ARM64 selection, classic Docker and Podman paths,
 export/import failures, and archive cleanup. This is import evidence, not a full
 TAK deployment on the ARC runner.
-The platform archive fix still needs a new ARC run after the user pushes it.
+PR run [38148047180](https://github.com/opendefence/tak-server/actions/runs/38148047180)
+confirmed the platform archive import on ARC. The schema Job then failed twice,
+and Zarf waited for its full 900-second completion limit. Raw diagnostic commands
+could not find the context because Task's kubeconfig did not persist into their
+shell. The failure step now exports `outputs/local/kubeconfig` and describes each
+schema Pod before collecting its logs.
+
+The published image at
+`sha256:e2245985aaef52603c99ff6a992e517613243f9e3a88d4d8352aa93474d8a2ea`
+reproduced a PostgreSQL TLS `protocol_version` error on local ARM64. The database's
+minimum and maximum were TLS 1.3. The image forced Java clients to TLS 1.2;
+only `run-tak.sh` enabled TLS 1.3, so direct schema launches missed the override.
+The image default now permits TLS 1.3 and TLS 1.2, and the duplicate launcher
+override is removed. An image derived from that published candidate with the
+updated image environment and launcher applied all 101 migrations successfully
+to a fresh disposable database. The direct-Java regression check failed on the
+published image and passed on the patched image, together with the launcher
+checks. The test Job and database were removed. A full rebuilt ARC deployment
+still needs a new run after the user pushes the TLS fix.
 Integrated acceptance and offline deployment of published Zarf packages remain open.
 No Snyk job was added.
 No workflow, image, or release was published from this session.

@@ -4,12 +4,18 @@ set -euo pipefail
 scripts="$(cd "$(dirname "$0")/../scripts" && pwd)"
 vendor_options="$(bash -c '. /opt/tak/setenv.sh >/dev/null; printf %s "$JDK_JAVA_OPTIONS"')"
 for option in $vendor_options; do
-  case "$option" in -Dloader.path=*) continue ;; esac
+  case "$option" in -Dloader.path=*|-Djdk.tls.client.protocols=*) continue ;; esac
   if [[ " ${JDK_JAVA_OPTIONS:-} " != *" $option "* ]]; then
     echo "FAIL: image JVM options omit $option" >&2
     exit 1
   fi
 done
+properties="$(java -XshowSettings:properties -version 2>&1)"
+if ! grep -Fq 'jdk.tls.client.protocols = TLSv1.3,TLSv1.2' <<< "$properties"; then
+  echo 'FAIL: direct Java launch must support TLS 1.3 databases and TLS 1.2 peers' >&2
+  exit 1
+fi
+echo 'PASS: direct Java launch permits TLS 1.3 and TLS 1.2'
 unset TAKCL_CORECONFIG_PATH
 if output="$(bash "${scripts}/run-tak.sh" config 2>&1)"; then
   echo 'FAIL: server started without its role configuration path' >&2
