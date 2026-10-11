@@ -95,8 +95,6 @@ class JavaTruststoreTest(unittest.TestCase):
         intermediate = self.certificate("cfssl-intermediate").read_bytes()
         chain = self.ca / "ca_chain.pem"
         chain.write_bytes(root + intermediate + root)
-        mkcert = self.ca / "miniwerk_ca.pem"
-        mkcert.write_bytes(self.certificate("mkcert").read_bytes())
         environment = {
             "JAVA_HOME": str(self.java_home),
             "JAVA_TOOL_OPTIONS": "-Dexample=preserved",
@@ -110,20 +108,18 @@ class JavaTruststoreTest(unittest.TestCase):
             self.assertIn(str(destination), options)
         self.assertFalse((self.root / "java-cacerts.p12").exists())
         listed = self.listing(destination)
-        self.assertIn("Your keystore contains 4 entries", listed)
-        for name in ("public-root", "cfssl-root", "cfssl-intermediate", "mkcert"):
+        self.assertIn("Your keystore contains 3 entries", listed)
+        for name in ("public-root", "cfssl-root", "cfssl-intermediate"):
             self.assertIn(f"Owner: CN={name}", listed)
         self.assertNotIn("PrivateKeyEntry", listed)
         self.assertEqual(destination.stat().st_mode & 0o777, 0o600)
 
         chain.write_bytes(root)
-        mkcert.unlink()
         with patch.dict(os.environ, environment):
             java_truststore.configure(self.root, self.ca, runtime=runtime)
         listed = self.listing(destination)
         self.assertIn("Your keystore contains 2 entries", listed)
         self.assertNotIn("cfssl-intermediate", listed)
-        self.assertNotIn("mkcert", listed)
         self.assertEqual(self.base.read_bytes(), base)
         self.assertEqual(self.cot.read_bytes(), b"CoT trust must not change")
         self.assertEqual(

@@ -89,7 +89,6 @@ def configure(
             ca_directory / "ca_chain.pem",
             ca_directory / "root_ca.pem",
             ca_directory / "intermediate_ca.pem",
-            ca_directory / "miniwerk_ca.pem",
             root / "data/certs/files/ca.pem",
         )
         if path.exists()
