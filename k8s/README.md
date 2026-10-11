@@ -164,7 +164,7 @@ It rejects a changed migration checksum and leaves the history row unchanged.
 Flyway uses a PostgreSQL advisory lock during migration.
 The versioned Job stays complete after success; a new release needs a new Job name.
 On an empty database, the Job installs the schema without `takdb_base.sql`.
-The old Compose initializer still uses that file, so keep it until Compose retirement.
+The legacy dump remains as an upgrade fixture; it is not used for fresh installs.
 Back up the database before any upgrade.
 Inspect the Job logs and schema history before starting the server.
 An existing database without Flyway history needs a separate reviewed migration.

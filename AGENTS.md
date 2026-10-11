@@ -20,7 +20,7 @@ This creates the disposable `tak-server-local` Kind cluster, with its kubeconfig
 at `outputs/local/kubeconfig`. `mise exec -- task --yes down` deletes that cluster
 and its test database and identities. See [k8s/README.md](k8s/README.md) for the
 native deployment contract and [docs/implementation-plan.md](docs/implementation-plan.md)
-for remaining work. Legacy Compose files remain until their replacements pass.
+for remaining work. `build_compose.yml` remains for distribution builds.
 
 ## Native architecture
 
@@ -54,9 +54,9 @@ LoadBalancer.
 4. The integrated deployment belongs in the `integration-tak` namespace. Its
    operator and API live in the sibling repository; this repo does not install
    them or grant them TAK Secret access.
-5. The legacy `makeCert`, user/admin, and client-ZIP scripts are scheduled for
-   removal in plan slice 7. Do not add new callers or treat their old examples
-   as the native installation workflow.
+5. The user/admin wrappers, client-ZIP generator, Compose initializer, and
+   `makeCert` have been removed. Do not add callers to distribution certificate
+   helpers.
 
 ## Related repositories
 
