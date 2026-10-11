@@ -25,6 +25,7 @@ jar --extract --file "$war" \
     WEB-INF/classes/com/bbn/marti/nio/codec/impls/X509AuthCodec.class \
     WEB-INF/classes/com/bbn/marti/groups/X509Authenticator.class \
     WEB-INF/classes/com/bbn/marti/util/spring/TakAuthenticationProvider.class \
+    WEB-INF/lib/spring-security-web-6.5.11.jar \
     WEB-INF/classes/security-context.xml
 
 check_method() {
@@ -35,8 +36,16 @@ check_method() {
 }
 
 check_method com.bbn.marti.nio.codec.impls.X509AuthCodec 'protected synchronized void doTlsAuth();'
+check_method com.bbn.marti.nio.codec.impls.X509AuthCodec 'public java.nio.ByteBuffer decode(java.nio.ByteBuffer);'
+check_method com.bbn.marti.nio.codec.impls.X509AuthCodec 'public java.nio.ByteBuffer encode(java.nio.ByteBuffer);'
 check_method com.bbn.marti.groups.X509Authenticator 'private com.bbn.marti.remote.groups.User auth(com.bbn.marti.remote.groups.User, com.bbn.marti.config.Input);'
 check_method com.bbn.marti.util.spring.TakAuthenticationProvider 'public org.springframework.security.core.Authentication authenticate(org.springframework.security.core.Authentication)'
+if ! javap -p -s -classpath WEB-INF/lib/spring-security-web-6.5.11.jar org.springframework.security.web.access.intercept.FilterSecurityInterceptor |
+    grep -Fq 'public void doFilter(jakarta.servlet.ServletRequest, jakarta.servlet.ServletResponse, jakarta.servlet.FilterChain)'; then
+    echo 'Unsupported HTTP authorization boundary' >&2
+    exit 1
+fi
 grep -Fq 'X509AuthenticationFilter,' WEB-INF/classes/security-context.xml
+grep -Fq 'FilterSecurityInterceptor" />' WEB-INF/classes/security-context.xml
 grep -Fq 'class="com.bbn.marti.util.spring.TakAuthenticationProvider"' WEB-INF/classes/security-context.xml
 echo 'Pinned TAK 5.8.84 authentication seams match'

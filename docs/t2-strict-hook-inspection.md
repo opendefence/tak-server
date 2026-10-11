@@ -15,12 +15,19 @@ exception and can close the channel asynchronously; that alone does not prove th
 CoT was stopped. The private `X509Authenticator.auth(User, Input)` checks revocation and
 may grant token, file, cache, LDAP, or anonymous access. Its legacy file path accepts a
 matching account identifier even when the stored scalar fingerprint differs.
+`X509AuthCodec.decode(ByteBuffer)` returns inbound bytes after `doTlsAuth()` returns, so
+the inbound decoder must block a rejected leaf before returning the first CoT. Its
+`encode(ByteBuffer)` path also needs a current approval check for existing connections.
 
 HTTP loads `security-context.xml` with `X509AuthenticationFilter` before the basic,
 OAuth token, bearer token, and access-decision filters. The X.509 filter calls
 `TakAuthenticationProvider.authenticate(Authentication)` with a certificate credential.
 The provider records the certificate and fingerprint in the HTTP session. A hook only
 in this provider would miss previously cached principals and other token paths.
+`FilterSecurityInterceptor.doFilter(ServletRequest, ServletResponse, FilterChain)` is
+the final configured authorization filter for `/**`, after the authentication filters.
+A per-request guard there can reject a missing/revoked leaf and a principal whose
+account differs from the approved certificate CN before the application handler runs.
 
 The next enforcement slice needs an admission check before messaging can route data
 and a per-request HTTP check that covers cached principals. Both must call the policy
