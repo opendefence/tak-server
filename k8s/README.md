@@ -100,7 +100,7 @@ After extracting the artifact ZIP and preparing the prerequisites below, deploy
 the archive matching your cluster's architecture:
 
 ```sh
-zarf package deploy zarf-package-tak-server-amd64-5.8.92-candidate.tar.zst
+zarf package deploy zarf-package-tak-server-amd64-5.8.92-candidate-standalone.tar.zst
 ```
 
 After preparing the deployment prerequisites below, deploy a published package:
