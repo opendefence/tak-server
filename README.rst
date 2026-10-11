@@ -32,6 +32,9 @@ administrator changes and federation trust on the persistent volume; do not
 delete the volume to renew certificates.
 Standalone uses TAK's legacy certificate authentication and does not project
 fingerprint approvals because it has no OpenDefence Core User authority.
+See `standalone administrator and user enrollment
+<k8s/README.md#standalone-administrators-and-user-enrollment>`_ for personal
+certificate issuance, browser access, and additional user registration.
 
 Client certificate issuance and package export for the integrated deployment
 belong to `integration-tak <https://github.com/opendefence/integration-tak>`_.

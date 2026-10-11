@@ -78,6 +78,137 @@ Later Pod starts validate the saved store and preserve its contents.
 An unrelated client trust root must not replace administrator-managed federation trust.
 Keep CoT and HTTPS identities separate. Do not widen client trust with public Java roots.
 
+## Standalone administrators and user enrollment
+
+Standalone uses certificates from the installation's PKI and TAK's legacy user records.
+The Kubernetes installation administrator performs the steps below.
+A TAK web administrator who has no PKI or Kubernetes access must request certificates from that administrator.
+Use a separate certificate and private key for each person.
+The `tak-admin-bootstrap` Job registers `tak-probe-identity` for health checks.
+Keep that identity for the probes. Issue a personal certificate for browser administration.
+
+### Issue the first personal administrator certificate
+
+The following example uses the disposable local cluster's cert-manager issuer.
+For another installation, select its kubeconfig and an issuer already trusted by `tak-client-trust`.
+An external PKI can supply the same client certificate, private key, and issuer chain instead.
+Require the `clientAuth` extended key usage and a unique certificate common name.
+Keep CA signing keys outside TAK Pods.
+
+```sh
+export KUBECONFIG="$PWD/outputs/local/kubeconfig"
+TAK_NAMESPACE=tak-server
+TAK_CERT_NAME=tak-admin
+kubectl -n "$TAK_NAMESPACE" wait --for=condition=complete job/tak-admin-bootstrap --timeout=180s
+kubectl -n "$TAK_NAMESPACE" apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ${TAK_CERT_NAME}
+spec:
+  secretName: ${TAK_CERT_NAME}
+  commonName: ${TAK_CERT_NAME}
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  usages: [digital signature, client auth]
+  issuerRef:
+    kind: ClusterIssuer
+    name: public-issuer
+EOF
+kubectl -n "$TAK_NAMESPACE" wait --for=condition=Ready "certificate/$TAK_CERT_NAME" --timeout=180s
+```
+
+Export the personal identity into the ignored `outputs` directory.
+The PKCS#12 command prompts for an export password.
+Use a separate file for HTTPS server trust; its issuer can differ from the client issuer.
+
+```sh
+umask 077
+TAK_CERT_DIR="$PWD/outputs/standalone/$TAK_CERT_NAME"
+mkdir -p "$TAK_CERT_DIR"
+kubectl -n "$TAK_NAMESPACE" get secret "$TAK_CERT_NAME" -o go-template='{{index .data "tls.crt" | base64decode}}' > "$TAK_CERT_DIR/client.crt"
+kubectl -n "$TAK_NAMESPACE" get secret "$TAK_CERT_NAME" -o go-template='{{index .data "tls.key" | base64decode}}' > "$TAK_CERT_DIR/client.key"
+kubectl -n "$TAK_NAMESPACE" get secret "$TAK_CERT_NAME" -o go-template='{{index .data "ca.crt" | base64decode}}' > "$TAK_CERT_DIR/client-ca.crt"
+kubectl -n "$TAK_NAMESPACE" get secret tak-https-identity -o go-template='{{index .data "ca.crt" | base64decode}}' > "$TAK_CERT_DIR/server-ca.crt"
+openssl pkcs12 -export -name "$TAK_CERT_NAME" \
+  -inkey "$TAK_CERT_DIR/client.key" -in "$TAK_CERT_DIR/client.crt" \
+  -certfile "$TAK_CERT_DIR/client-ca.crt" -out "$TAK_CERT_DIR/client.p12"
+```
+
+For an external PKI, put its returned files at the same paths.
+Obtain the HTTPS server CA bundle from the server's PKI if `ca.crt` is absent from its Secret.
+Register the public client certificate as an administrator through the maintained UserManager launcher.
+This command sends only the public certificate to the messaging container.
+
+```sh
+kubectl -n "$TAK_NAMESPACE" exec -i tak-server-0 -c messaging -- sh -ceu '
+  certificate=$(mktemp /tmp/tak-admin.XXXXXX)
+  trap '\''rm -f "$certificate"'\'' EXIT
+  cat > "$certificate"
+  TAK_MESSAGING_HOST=tak-ignite /opt/scripts/user-manager.sh certmod -A "$certificate"
+' < "$TAK_CERT_DIR/client.crt"
+```
+
+Import `client.p12` into the browser's personal certificate store.
+Trust `server-ca.crt` for the server connection if the browser does not already trust its issuer.
+Open `https://TAK_SERVER_ADDRESS:8443/Marti` and select the personal administrator certificate.
+Use the DNS name in the server certificate.
+For the local cluster, run this command in another terminal with the same kubeconfig:
+
+```sh
+kubectl -n tak-server port-forward svc/tak-server 8443:8443
+```
+
+Open `https://tak.localtest.me:8443/Marti`.
+Verify administrator access with the new identity:
+
+```sh
+curl --fail --silent --show-error \
+  --resolve tak.localtest.me:8443:127.0.0.1 \
+  --cacert "$TAK_CERT_DIR/server-ca.crt" \
+  --cert "$TAK_CERT_DIR/client.crt" --key "$TAK_CERT_DIR/client.key" \
+  https://tak.localtest.me:8443/Marti/api/user-management/api/list-users
+```
+
+For a remote installation, use its hostname and omit the local `--resolve` argument.
+Deliver a personal PKCS#12 file through an approved private channel.
+Keep its password separate from the file.
+
+### Enroll more users
+
+Repeat issuance and export with a new `TAK_CERT_NAME` for each user, such as `alice`.
+Do not run the administrator registration command for ordinary users.
+Register their public certificate with the required TAK group instead:
+
+```sh
+kubectl -n "$TAK_NAMESPACE" exec -i tak-server-0 -c messaging -- sh -ceu '
+  certificate=$(mktemp /tmp/tak-user.XXXXXX)
+  trap '\''rm -f "$certificate"'\'' EXIT
+  cat > "$certificate"
+  TAK_MESSAGING_HOST=tak-ignite /opt/scripts/user-manager.sh certmod -g team-alpha "$certificate"
+' < "$TAK_CERT_DIR/client.crt"
+```
+
+Replace `team-alpha` with the intended group.
+The pinned UserManager defines `-g` as permission to send and receive that group's messages.
+For an existing account, `-g` replaces its groups. Use `-a -g` to append a group.
+Do not reuse another person's common name or certificate.
+Check the account and groups in the administrator web UI before distributing credentials.
+Import the user's `client.p12` into their TAK client.
+Configure TLS to the server's DNS name on TCP 8089.
+Supply the CA bundle that validates the server's CoT certificate; it can differ from the HTTPS CA.
+Use the client's trust-store format, such as a CA-only PKCS#12 file where required.
+Verify traffic with another client in the same group.
+Verify that the new user cannot open administrator functions.
+
+This is manual certificate enrollment.
+The current manifests do not configure a certificate-signing service or expose enrollment port 8446.
+Creating a username and password in the web UI does not supply a client certificate in this deployment.
+Password-based automatic enrollment needs a separate issuer, endpoint, and acceptance test.
+The full browser and client procedure remains an open [acceptance check](../docs/implementation-plan.md#6-complete-standalone-operation-ci-and-cleanup).
+The command flags above were checked against the pinned `5.8-RELEASE-92` UserManager.
+
 ## Zarf packages
 
 The repository root [`zarf.yaml`](../zarf.yaml) packages both native overlays and
