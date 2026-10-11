@@ -11,5 +11,3 @@ outputs
 .dockerignore
 Dockerfile
 Dockerfile_build
-.devspace
-devspace.yaml
