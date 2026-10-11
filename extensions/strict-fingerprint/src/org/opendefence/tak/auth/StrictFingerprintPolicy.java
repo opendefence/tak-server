@@ -21,8 +21,9 @@ import javax.naming.ldap.LdapName;
 public final class StrictFingerprintPolicy {
     private static final int MAX_ACCOUNTS = 1024;
     private static final int MAX_FINGERPRINTS = 32;
+    private static final int AUTHORITY_LEASE_SECONDS = 60;
     private final Clock clock;
-    private volatile Snapshot snapshot = new Snapshot(UUID.randomUUID(), Map.of());
+    private volatile Snapshot snapshot = new Snapshot(UUID.randomUUID(), Instant.EPOCH, Map.of());
 
     public record Approval(Instant validUntil, Set<String> fingerprints) {
         public Approval {
@@ -35,9 +36,10 @@ public final class StrictFingerprintPolicy {
         }
     }
 
-    public record Snapshot(UUID revision, Map<String, Approval> accounts) {
+    public record Snapshot(UUID revision, Instant authorityValidUntil, Map<String, Approval> accounts) {
         public Snapshot {
             Objects.requireNonNull(revision);
+            Objects.requireNonNull(authorityValidUntil);
             accounts = Map.copyOf(accounts);
         }
     }
@@ -56,6 +58,9 @@ public final class StrictFingerprintPolicy {
         if (!snapshot.revision().equals(expectedRevision)) {
             throw new ConcurrentModificationException("Approval revision changed; read before retrying");
         }
+        if (!clock.instant().isBefore(snapshot.authorityValidUntil()) && !snapshot.accounts().isEmpty()) {
+            throw new IllegalStateException("Expired authority must be invalidated before replay");
+        }
         if (accountId == null || accountId.isBlank() || accountId.length() > 256) {
             throw new IllegalArgumentException("Expected an account identifier of 1 through 256 characters");
         }
@@ -68,13 +73,26 @@ public final class StrictFingerprintPolicy {
         if (approval.fingerprints().isEmpty()) accounts.remove(accountId);
         else accounts.put(accountId, approval);
         if (accounts.size() > MAX_ACCOUNTS) throw new IllegalArgumentException("Too many approved accounts");
-        snapshot = new Snapshot(UUID.randomUUID(), accounts);
+        snapshot = new Snapshot(UUID.randomUUID(), clock.instant().plusSeconds(AUTHORITY_LEASE_SECONDS), accounts);
+        return snapshot;
+    }
+
+    /** Refresh only after the owner has confirmed that the authoritative projection is current. */
+    public synchronized Snapshot renewAuthority(UUID expectedRevision) {
+        if (!snapshot.revision().equals(expectedRevision)) {
+            throw new ConcurrentModificationException("Approval revision changed; read before retrying");
+        }
+        if (!clock.instant().isBefore(snapshot.authorityValidUntil()) && !snapshot.accounts().isEmpty()) {
+            throw new IllegalStateException("Expired authority must be invalidated before replay");
+        }
+        snapshot = new Snapshot(UUID.randomUUID(), clock.instant().plusSeconds(AUTHORITY_LEASE_SECONDS),
+                snapshot.accounts());
         return snapshot;
     }
 
     /** The owner must invalidate the projection when authoritative state becomes unavailable. */
     public synchronized void invalidate() {
-        snapshot = new Snapshot(UUID.randomUUID(), Map.of());
+        snapshot = new Snapshot(UUID.randomUUID(), Instant.EPOCH, Map.of());
     }
 
     /** Called after TLS certificate-chain validation and before any role, token, or cache grant. */
@@ -82,6 +100,9 @@ public final class StrictFingerprintPolicy {
         var current = snapshot;
         var now = clock.instant();
         if (accountId == null || leaf == null) throw new CertificateException("Client identity required");
+        if (!now.isBefore(current.authorityValidUntil())) {
+            throw new CertificateException("Current approval authority required");
+        }
         var approval = current.accounts().get(accountId);
         if (approval == null || !now.isBefore(approval.validUntil())) {
             throw new CertificateException("Current certificate approval required");

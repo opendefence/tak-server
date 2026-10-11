@@ -134,6 +134,22 @@ public final class StrictFingerprintPolicyTest {
         };
         var expiring = new StrictFingerprintPolicy(advancingClock);
         expiring.replace(expiring.read().revision(), USER, deadline, Set.of(fingerprint(main)));
+        var lease = expiring.read();
+        check(lease.authorityValidUntil().equals(now.plusSeconds(60)));
+        time.set(now.plusSeconds(30));
+        var renewed = expiring.renewAuthority(lease.revision());
+        check(renewed.authorityValidUntil().equals(now.plusSeconds(90)));
+        rejects(ConcurrentModificationException.class, () -> expiring.renewAuthority(lease.revision()));
+        time.set(now.plusSeconds(89));
+        expiring.requireApproved(USER, main);
+        time.set(now.plusSeconds(90));
+        rejects(CertificateException.class, () -> expiring.requireApproved(USER, main));
+        rejects(IllegalStateException.class, () -> expiring.renewAuthority(renewed.revision()));
+        rejects(IllegalStateException.class,
+            () -> expiring.replace(renewed.revision(), USER, deadline, Set.of(fingerprint(main))));
+        expiring.invalidate();
+        expiring.replace(expiring.read().revision(), USER, deadline, Set.of(fingerprint(main)));
+        expiring.requireApproved(USER, main);
         time.set(deadline);
         rejects(CertificateException.class, () -> expiring.requireApproved(USER, main));
         for (var invalidTime : List.of(main.getNotBefore().toInstant().minusSeconds(1), main.getNotAfter().toInstant().plusSeconds(1))) {
@@ -149,7 +165,7 @@ public final class StrictFingerprintPolicyTest {
         rejects(CertificateException.class, () -> restarted.requireApproved(USER, main));
         rejects(ConcurrentModificationException.class,
             () -> restarted.replace(both.revision(), USER, deadline, Set.of(fingerprint(main))));
-        System.out.println("RESULT lease_deadline=DENY expired_leaf=DENY future_leaf=DENY unavailable_projection=DENY restart=DENY pre_restart_write=REJECT");
+        System.out.println("RESULT authority_lease=DENY expired_replay=REJECT lease_deadline=DENY expired_leaf=DENY future_leaf=DENY unavailable_projection=DENY restart=DENY pre_restart_write=REJECT");
 
         var concurrent = new StrictFingerprintPolicy(clock);
         var sharedRevision = concurrent.read().revision();

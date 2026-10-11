@@ -2,7 +2,7 @@
 
 Status: the user adopted this server change on 2026-10-10.
 The policy, admission agent, and local denial tests are implemented for the pinned binary.
-Trusted projection, both-JVM readback, freshness, and complete acceptance remain open.
+Trusted projection, both-JVM readback, the authority lease owner, and complete acceptance remain open.
 Do not advertise this as a complete strict-authentication release.
 
 The user approved the integration proposal after the actual 5.8.84 component test accepted an unapproved same-UUID certificate.
@@ -26,8 +26,8 @@ Old update tokens cannot overwrite state after either event.
 This is a server revision, not a Core generation or durable activation event.
 
 The caller supplies an explicit approval deadline. Access ends at that deadline, with no default overlap timer.
-The owner must call `invalidate()` when authoritative state becomes unavailable.
-The policy cannot detect transport failure by itself.
+Each successful update or conditional renewal sets a 60-second authority lease, visible in immutable readback. Admission stops when either the account deadline or authority lease expires. An expired nonempty projection must be invalidated before replay; renewing it cannot silently revive old approvals.
+The owner must renew only after confirming the complete authoritative projection is current, and call `invalidate()` when that authority becomes unavailable. The policy cannot detect transport failure by itself.
 Concurrent revocation does not cancel a decision already made from an earlier snapshot.
 Existing connections, resumed sessions, and cached HTTP principals need their own enforcement checks.
 
@@ -53,7 +53,7 @@ It compiles with `--release 17 -Xlint:all -Werror` and runs the assertions.
 It tests two approved same-UUID certificates, an unapproved same-UUID certificate, CN ambiguity,
 single-certificate removal, empty/missing state, lease and certificate expiry, concurrent updates, and restart tokens.
 No keys or generated certificates remain after the container exits.
-The 2026-10-10 ARM64 policy run passed 46 assertions. The hook helper test now also
+The ARM64 policy run now passes 52 assertions, including lease expiry, renewal, and expired-projection rejection. The hook helper test also
 checks approved, unapproved, mismatched-principal, missing-certificate, and invalidated traffic.
 The duplicate-CN test first failed because JNDI collapsed identical values inside one RDN.
 The policy now checks the RDN's attribute count before accepting its CN.

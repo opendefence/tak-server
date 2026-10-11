@@ -61,6 +61,14 @@ class StartupTest(unittest.TestCase):
             start_tak.main()
         self.assertFalse((self.data / ".coreconfig-service.lock").exists())
 
+    def test_api_waits_for_messaging_listener_and_times_out(self) -> None:
+        with patch("start_tak.socket.create_connection", side_effect=OSError):
+            with self.assertRaisesRegex(TimeoutError, "Messaging CoT listener"):
+                start_tak.wait_for_messaging(timeout=0)
+        with patch("start_tak.socket.create_connection") as connect:
+            start_tak.wait_for_messaging(timeout=0)
+            connect.assert_called_once_with(("127.0.0.1", 8089), timeout=1)
+
     def test_prepares_one_authority_and_preserves_admin_restart_changes(self) -> None:
         shutil.copy("/opt/tak/CoreConfig.xsd", self.root / "CoreConfig.xsd")
         templates = Path(__file__).resolve().parents[1] / "templates"

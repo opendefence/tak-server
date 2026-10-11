@@ -3,6 +3,7 @@
 import argparse
 import fcntl
 import os
+import socket
 import subprocess
 import tempfile
 import time
@@ -173,6 +174,19 @@ def wait_for_configuration(data: Path, timeout: float = 180) -> None:
         time.sleep(0.2)
 
 
+def wait_for_messaging(timeout: float = 180) -> None:
+    """Start API only after the messaging service has opened its CoT listener."""
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            with socket.create_connection(("127.0.0.1", 8089), timeout=1):
+                return
+        except OSError:
+            if time.monotonic() >= deadline:
+                raise TimeoutError("Messaging CoT listener did not start") from None
+            time.sleep(1)
+
+
 def main() -> None:
     """Keep the ownership lock across exec; followers never render shared XML."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -209,6 +223,8 @@ def main() -> None:
     link_file(root / "TAKIgniteConfig.xml", ignite)
     os.environ["TAKCL_CORECONFIG_PATH"] = str(local)
     java_truststore.configure(root, runtime=ignite.parent)
+    if args.profile == "api":
+        wait_for_messaging()
     os.execv("/bin/bash", ["/bin/bash", "/opt/scripts/run-tak.sh", args.profile])
 
 

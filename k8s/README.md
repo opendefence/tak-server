@@ -194,6 +194,7 @@ The bootstrap Job can therefore reach messaging while probes still await adminis
 Services select only server Pods; they exclude bootstrap Pods.
 The bootstrap Job has a 180-second deadline and two retries. Probe operations have a four-second process timeout.
 Readiness checks the local JVM, live config ownership, and an authenticated API request that reads the messaging user-management service.
+The API launcher waits for the messaging CoT listener before JVM startup; it exits after 180 seconds if messaging has not opened it, allowing Kubernetes to retry.
 It does not establish direct configuration RPC health or plugin callback health.
 Readiness checks every 15 seconds and fails on the first failed operation.
 Startup allows 60 attempts at five-second intervals. Liveness restarts each affected role after six failed checks at 15-second intervals.

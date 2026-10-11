@@ -141,7 +141,7 @@ The disposable upgraded schema matched a fresh install. Seeded roles and three a
 An interrupted disposable Job stopped at blocked V98; a new Job applied V98–V106 and matched the fresh schema.
 Test a full production-like data set, reviewed adoption, and other failure points before closing this item.
 An [isolated fresh install and HTTPS renewal](t2-standalone-renewal.md) passed with supplied JKS stores and an unchanged password.
-First startup exposed an API/message-service race; fix that ordering or make the failed API JVM exit promptly.
+The API launcher now waits up to 180 seconds for the messaging CoT listener before starting its JVM, and exits for a Kubernetes retry if it never appears. A delayed-messaging rollout passed; reproduce the original missing-metrics-service failure on a fresh install before closing this race.
 Then test password and trust rotation, automatic issuer renewal, and the actual standalone overlay.
 
 ### 4. Wire strict authentication and management
@@ -153,7 +153,7 @@ Then test password and trust rotation, automatic issuer renewal, and the actual 
 - [x] Add explicit `TAK_AUTH_MODE` startup validation outside the vendor CoreConfig schema. A missing/incompatible agent fails strict startup; empty, invalidated, or restarted approval state denies access without a legacy fallback. Keep separate future management settings outside the vendor schema.
 - [ ] Expose a trusted complete-set update for one UUID's approved leaf fingerprints, explicit deadline, and conditional revision. Provide immutable readback and clear conflicts, failures, and limit errors.
 - [ ] Apply and acknowledge the projection in both messaging and API JVMs. Bind permission and credential readback to the requested projection; preserve roles, groups, and the UUID account when one leaf is removed. Resolve uncertain writes by readback before retry.
-- [ ] Define the owner that invalidates approval on stale/unavailable authority and enforces its freshness bound. Missing, expired, invalidated, and restarted state must deny access.
+- [ ] Define the owner that renews only after confirming the complete authority and invalidates approval on stale/unavailable authority. The policy now enforces a 60-second authority lease and rejects renewal of an expired nonempty projection; complete both-JVM owner wiring and test loss/recovery. Missing, expired, invalidated, and restarted state must deny access.
 - [ ] Enforce after TLS chain/client-usage validation and before every role, group, cache, token, LDAP, or anonymous grant. Audit enabled certificate entry points and disable unsupported transports until tested.
 - [ ] Stop denied messaging before the first CoT is routed. Cover protected HTTP, cached principals, existing connections, tokens, and resumed TLS sessions. Define and measure the revocation bound.
 - [ ] Package and version the external extension, its configuration schema, and management capability with the unchanged WAR and `UserManager.jar`. Add a companion management JAR only if the new interface needs one. Expose the active strict mode, extension version, and vendor artifact identifiers so integration rejects incompatible or inactive enforcement.
@@ -251,4 +251,4 @@ Do not advertise strict authentication or production readiness before the couple
 ## LDAP interval binary compatibility follow-up
 
 - [x] For `5.8-RELEASE-92`, inspect the direct consumers and their downstream timing paths. [Release-92 evidence](release-92-candidate.md) establishes seconds in both; restore the default to `60`. The second practical test was inconclusive.
-- [ ] Whenever the TAK Server binary version changes, inspect the actual bytecode of every `updateinterval` consumer and its downstream scheduler/comparison before retaining `60`; verify effective timing in a running LDAP setup when available.
+- [ ] Whenever the TAK Server binary version changes, inspect the actual bytecode of every `updateinterval` consumer and its downstream scheduler/comparison before retaining `60`.
