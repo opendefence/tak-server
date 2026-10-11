@@ -4,7 +4,13 @@ Workflow callers now pin checkout, uv, prek, and shared CI actions to commit IDs
 The shared publishing action derives the registry owner from `GITHUB_REPOSITORY_OWNER`.
 In this repository, it targets `ghcr.io/opendefence/tak-server`.
 Docker Hub and ACR inputs are omitted.
-PR checks do not publish images.
+After PR checks and native validation pass, same-repository PRs publish the
+Dockerfile's `run` target for AMD64/ARM64 through the same shared action. It
+generates `VERSION-prNUMBER` and `VERSION-prNUMBER-TIMESTAMP` tags, plus the PR
+merge-ref tag, at `ghcr.io/opendefence/tak-server`; invalid version characters
+such as `+` become `-`. No `extra-tag` is supplied, so PR builds do not move the
+vendor release tag or main's `latest` tag. Fork PRs, Dependabot PRs, and manual
+validation runs skip the publishing job. PRs do not publish Zarf packages.
 
 Every push to main publishes the Dockerfile's `run` target after the checks job
 passes; `TAK_PUBLISH_ENABLED` is no longer required. The shared action uses native
@@ -41,8 +47,10 @@ Live runner and deployment acceptance still need these checks:
 
 The pinned publishing action checks the ARC runner name and TLS file presence.
 Live BuildKit access has not been tested from this session.
-PR validation now builds the image directly, runs image checks, and uses the
-native Taskfile to deploy into a disposable Kind cluster. Runner execution is
-still unverified; the same Taskfile passed locally.
+PR validation builds the candidate locally, runs image checks, and uses the
+native Taskfile to deploy into a disposable Kind cluster. The PR publishing job
+then builds both platforms through the shared action's native BuildKit endpoints.
+The published PR image has not yet been verified on the live runner; the same
+Taskfile passed locally.
 No Snyk job was added.
 No workflow, image, or release was published from this session.

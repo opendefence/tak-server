@@ -84,3 +84,31 @@ jobs:
       - name: Clean up disposable cluster
         if: always()
         run: mise exec -- task --yes down
+
+  publish_pr_image:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    needs: [checks, native_validations]
+    runs-on: arc-runner-set
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Install git-lfs
+        run: sudo apt-get update && sudo apt-get install -y git-lfs
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          lfs: true
+      - name: Publish PR image
+        uses: pvarki/config-ci-library/.github/actions/publish-image@1786399bf62c2b691f1e8fb9dcfc7a0be72a2846
+        with:
+          product: tak
+          component: server
+          target: run
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            TAK_RELEASE=${{ env.TAK_RELEASE }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
