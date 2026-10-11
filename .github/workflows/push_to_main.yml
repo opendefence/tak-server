@@ -91,7 +91,7 @@ jobs:
             -B -m unittest discover -s /workspace/tests -v
           sh tests/test-strict-agent.sh "$TAK_TEST_IMAGE"
           for test in test-server-launcher test-api-keystore; do
-            docker run --rm --pull=never --network none -v "$PWD:/workspace:ro" \
+            docker run --rm --pull=never -v "$PWD:/workspace:ro" \
               --entrypoint /bin/bash "$TAK_TEST_IMAGE" "/workspace/tests/$test.sh"
           done
       - name: Validate Zarf flavors and report image reference
