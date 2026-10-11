@@ -65,6 +65,10 @@ LoadBalancer.
    Kubernetes), `mediamtx-operator`, CloudNativePG operator, or External Secrets
    Operator. Avoid bare "operator" or "sibling operator" when a specific component
    is meant. Say "administrator" when referring to a person.
+7. Run `prek install` in each checkout so the repository's basic pre-commit and
+   commit-message checks run on local commits. Run `prek run --all-files`
+   regularly, especially before pushing or creating/updating a PR when authorized
+   to do so. Fix any failures before proceeding.
 
 ## Related repositories
 
