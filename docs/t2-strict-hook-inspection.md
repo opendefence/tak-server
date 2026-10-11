@@ -29,11 +29,12 @@ the final configured authorization filter for `/**`, after the authentication fi
 A per-request guard there can reject a missing/revoked leaf and a principal whose
 account differs from the approved certificate CN before the application handler runs.
 
-The next enforcement slice needs an admission check before messaging can route data
-and a per-request HTTP check that covers cached principals. Both must call the policy
-only after TLS chain and client-usage validation. The hook installer must verify each
-required target in each JVM before opening client traffic. The current `TAK_AUTH_MODE=strict`
-startup rejection remains in place until those checks and the trusted projection work.
+The external agent now checks messaging before `decode` returns CoT and before `encode`
+sends data, checks the authenticator before grants, and checks the HTTP authorization
+filter on every request. Its launcher loads and verifies each required transformed class
+before TAK opens client traffic; absent injection or changed vendor bytes stop startup.
+The policy starts empty. Trusted projection and both-JVM readback are still required
+before strict mode can admit approved clients or report full capability.
 
 Probe command (using the pinned Java 17 JDK image and locally retained vendor binaries):
 

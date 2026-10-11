@@ -69,7 +69,8 @@ Agree the trusted management writer, transport, freshness bound, and capability 
 
 `StrictFingerprintPolicy` and its conformance tests are implemented. No TAK authentication path calls the policy.
 The plugin launcher proves a separate plugin startup workaround. It does not enforce certificate approval.
-The current server rejects `TAK_AUTH_MODE=strict`, and the integrated overlay selects legacy mode.
+The current image installs pinned admission hooks when `TAK_AUTH_MODE=strict`, and the integrated overlay selects legacy mode.
+Strict approval state starts empty; trusted projection and both-JVM readback are still missing.
 
 Notify the user when a pinned candidate enforces strict admission in both messaging and API.
 The candidate must deny startup if the injection is absent or incompatible.
@@ -148,7 +149,7 @@ Then test password and trust rotation, automatic issuer renewal, and the actual 
 - [x] Inspect the pinned messaging and HTTP authentication seams and add a
   [vendor compatibility probe](t2-strict-hook-inspection.md). It rejects other
   artifact hashes and changed inspected signatures; it does not install hooks.
-- [ ] Implement an external launcher/extension for messaging and API. Use the smallest replacement that covers the inspected call paths. If instrumentation is needed, pin its class/method targets and verify classloader behavior against the selected artifacts.
+- [x] Implement an external launcher/extension for messaging and API. The agent pins the vendor tuple and transformed class bytes, verifies both classloader paths before TAK startup, and fails closed on missing/incompatible injection. Live negative CoT/HTTP checks passed; approved-client and revocation acceptance remain below.
 - [ ] Add an explicit strict file-auth mode in validated extension configuration. Keep new settings outside the unchanged vendor CoreConfig schema. Fail startup if required injection is absent or incompatible. Invalid or unavailable strict state must deny access without falling back to legacy mode.
 - [ ] Expose a trusted complete-set update for one UUID's approved leaf fingerprints, explicit deadline, and conditional revision. Provide immutable readback and clear conflicts, failures, and limit errors.
 - [ ] Apply and acknowledge the projection in both messaging and API JVMs. Bind permission and credential readback to the requested projection; preserve roles, groups, and the UUID account when one leaf is removed. Resolve uncertain writes by readback before retry.

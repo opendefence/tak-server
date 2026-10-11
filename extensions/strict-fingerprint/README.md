@@ -1,8 +1,9 @@
 # Strict fingerprint policy
 
 Status: the user adopted this server change on 2026-10-10.
-The policy and its conformance tests are implemented. TAK does not call this policy yet.
-Do not advertise strict authentication or deploy this directory as a complete server patch.
+The policy, admission agent, and local denial tests are implemented for the pinned binary.
+Trusted projection, both-JVM readback, freshness, and complete acceptance remain open.
+Do not advertise this as a complete strict-authentication release.
 
 The user approved the integration proposal after the actual 5.8.84 component test accepted an unapproved same-UUID certificate.
 This approval supersedes the older `AGENTS.md` restriction on application changes for this specific authentication change.
@@ -52,7 +53,8 @@ It compiles with `--release 17 -Xlint:all -Werror` and runs the assertions.
 It tests two approved same-UUID certificates, an unapproved same-UUID certificate, CN ambiguity,
 single-certificate removal, empty/missing state, lease and certificate expiry, concurrent updates, and restart tokens.
 No keys or generated certificates remain after the container exits.
-The 2026-10-10 ARM64 run passed 46 assertions. Applicable repository checks passed.
+The 2026-10-10 ARM64 policy run passed 46 assertions. The hook helper test now also
+checks approved, unapproved, mismatched-principal, missing-certificate, and invalidated traffic.
 The duplicate-CN test first failed because JNDI collapsed identical values inside one RDN.
 The policy now checks the RDN's attribute count before accepting its CN.
 
@@ -66,7 +68,7 @@ Older public source is an inspection aid only. Compatibility depends on the targ
 
 Complete these changes together:
 
-1. Add validated strict-mode extension configuration outside the vendor CoreConfig schema. Install and verify hooks before client admission in both JVMs. Missing or incompatible injection must stop strict startup. Preserve legacy mode only when explicitly selected.
+1. Complete validated strict-mode extension configuration outside the vendor CoreConfig schema. The pinned admission hooks now install before TAK startup; keep incompatible injection fail-closed and legacy mode explicitly selected.
 2. Bind a trusted management writer to complete accepted sets, deadlines, and revision-checked updates.
 3. Distribute and acknowledge the projection in messaging and API processes. A local write does not prove either remote process applied it.
 4. Enforce the policy before token, group-cache, role, group, and anonymous grants. Cover every supported certificate authentication entry point.
@@ -75,8 +77,10 @@ Complete these changes together:
 7. Version the extension, its configuration schema, and management capability with the unchanged WAR and `UserManager.jar`. Supply a companion management JAR only if needed. Report the active enforcement mode and artifact versions to integration.
 8. Repeat the actual-binary matrix and live TLS/CoT/HTTPS tests in a separate test environment. Include absent/incompatible injections, changed hooks, and classloader failures. Verify that these failures cannot expose an unprotected strict service.
 
-The current tests exercise this policy, not the TAK authentication entry points.
-The unmodified 5.8.84 binary still fails the approved-set requirement.
+The current Java tests exercise the policy and hook helpers. A disposable local cluster
+confirmed unapproved HTTP 403 and first-CoT denial through the injected entry points.
+There is no trusted writer to populate approvals in running JVMs yet, so approved-client
+live CoT/HTTP and revocation timing remain untested.
 Production Core adapters also require the versioned identity, approval, freshness, and observation contracts.
 
 The [pinned hook inspection](../../docs/t2-strict-hook-inspection.md) records the

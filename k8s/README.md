@@ -3,7 +3,9 @@
 This base runs TAK 5.8.84 as config, messaging, and API containers in one singleton StatefulSet.
 The image includes the external plugin launcher. The base does not enable plugin manager or retention.
 The candidate supports explicit legacy authentication. Strict authentication remains under implementation.
-Selecting `TAK_AUTH_MODE=strict` stops startup until that injection exists. Do not use this candidate as a strict-authentication release.
+Selecting `TAK_AUTH_MODE=strict` installs the pinned admission agent in messaging and API.
+Its approval state starts empty, so client access and the current probe readiness fail
+until a trusted projection is implemented. Do not use this candidate as a strict-authentication release.
 
 ## Local standalone test cluster
 
