@@ -246,3 +246,7 @@ T6 uses `gpt-6.1-sol` / `medium` for closure, with no new runtime changes.
 Deliver one versioned contract: image/build provenance, external extension source and checksums, and unchanged vendor WAR/JAR checksums; extension configuration/strict/management capability versions; reusable base/overlays; Services, Secrets, mounts, profiles, and network requirements; update/readback/observation semantics; operation/recovery bounds; renewal, upgrade, and restore procedures; supported platforms/storage/roles and acceptance limits.
 Integration's I0 image still carries a 5.8.69 JAR and must be repinned to this final tuple.
 Do not advertise strict authentication or production readiness before the coupled live acceptance passes.
+
+## LDAP interval binary compatibility follow-up
+
+- [ ] Whenever the TAK Server binary version changes, inspect the actual bytecode of every `updateinterval` consumer and verify the effective refresh timing in a running server. Remove the temporary `6000` default once bytecode establishes the actual behavior and runtime testing agrees; then set a release-verified value explicitly where needed.

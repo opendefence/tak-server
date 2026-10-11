@@ -91,11 +91,10 @@ with the tested base defaults. Internal mount paths, the Ignite discovery Servic
 and legacy authentication mode are fixed by this candidate. Compose-only CA
 generation, admin certificate, and mission-package environment variables are not
 used by the native deployment.
-`LDAP_UPDATE_INTERVAL` is a Zarf parameter in seconds when LDAP is configured;
-the default is 60 seconds for the pinned TAK 5.8.84 binary. Both inspected
-consumers use seconds: the LDAP authenticator schedules in seconds, while the
-X.509 codec converts the value to milliseconds internally. A value of `6000`
-would therefore delay refresh for 100 minutes in this binary.
+`LDAP_UPDATE_INTERVAL` is a Zarf parameter when LDAP is configured. Practical
+testing of the pinned TAK 5.8.84 binary found millisecond behavior, so the
+tested default is `6000`. Recheck both consumers against actual bytecode and
+runtime behavior whenever the TAK binary changes (see the implementation plan).
 The template also sets `MissionStrictUidMissionMembership=false` for new installs.
 Existing administrator XML with an explicit value keeps that choice; a missing
 value is filled with `false` during the next configuration merge.
