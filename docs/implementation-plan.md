@@ -175,10 +175,42 @@ Keep activation semantics, callsign handling, and observer tests in the integrat
 - [ ] Provide Kind/existing-cluster standalone overlays and a narrow legacy-authentication admin bootstrap Job without Core, RMAPI, integration CRDs, `tak-operator`, or sibling checkouts. Do not add standalone fingerprint approvals.
 - [x] Add a local Taskfile using the pinned `opendefence/base` Kind task. In the disposable standalone cluster, generate passwords through ESO, create the CNPG/PostGIS database and managed runtime role, issue JKS identities through cert-manager, deploy with Zarf, and require an authenticated HTTPS smoke check. Production issuer/retention/adoption remain open; strict-mode acceptance belongs to integrated deployment.
 - [ ] Expose appropriate CoT/federation TCP services and preserve TAK `/Marti` mTLS semantics separately from `/integrations/tak/api/v1`.
+- [ ] Verify the [standalone administrator and enrollment procedure](../k8s/README.md#standalone-administrators-and-user-enrollment) with a fresh personal administrator certificate and a separate ordinary user. Prove browser access, user group permissions, client import, and persistence after restart. Keep password-based automatic enrollment outside the supported contract until its issuer and endpoint are configured and tested.
 - [ ] Finish native replacement checks after removing Compose deployment, obsolete OSS build, RM bootstrap, duplicate user/ZIP wrappers, and Azure/DevSpace paths. Retain `build_compose.yml` for distribution builds, optional pinned APK/update content, and historical LFS data.
 - [ ] Provide coordinated backup/restore for database, XML, file-auth, trust, content, and identities. Uninstall must retain data. Integration separately excludes live grants from restore.
 - [ ] Finish [CI migration](ci-migration.md): pinned actions, PR-tagged images tested by published digest, `arc-runner-set`, native AMD64/ARM64 BuildKit with `/etc/buildkit/tls/{ca.crt,tls.crt,tls.key}`, and disposable Kubernetes validation of the exact candidate.
 - [x] Configure main to publish the runtime image to `ghcr.io/opendefence/tak-server` for AMD64/ARM64, verify the published digest, and build, sign, and publish both Zarf flavors to `ghcr.io/opendefence/zarf/tak-server`. Live runner/deployment acceptance and offline deployment of those packages remain open; see [CI migration](ci-migration.md).
+
+#### Federation setup and restart acceptance
+
+Test two independent TAK servers with separate databases, storage, identities, and trust roots.
+Configure federation through the administrator REST API on HTTPS 8443.
+Use the same API as the web UI. Do not seed peer configuration by editing XML for this test.
+The pinned `5.8-RELEASE-92` WAR contains these routes in `Marti/federation/js/services.js`:
+`/Marti/api/federationconfig`, `/Marti/api/federates`, `/Marti/api/federatedetails/{id}`,
+`/Marti/api/federategroups/{id}`, `/Marti/api/outgoingconnections/{name}`, and `/Marti/api/activeconnections`.
+These are inspection evidence. Live federation setup remains untested.
+
+- [ ] Confirm the exact REST methods, request bodies, certificate upload route, and authorization rules against the pinned server. Use verified HTTPS and a distinct administrator identity on each server. Record sanitized requests and readback assertions.
+- [ ] Import peer trust through the supported API. Create peer identities, group mappings, and an outgoing connection. Read them back through REST and confirm that the web UI shows the same state.
+- [ ] Prove bidirectional CoT delivery between clients on different servers. Verify permitted groups and reject traffic outside those groups. Check mission and file transfer for each enabled federation feature, including advertised HTTPS URLs and their required ports.
+- [ ] Record parsed peer configuration, group mappings, and federation trust entries before restart. Restart config, messaging, and API containers separately. Then replace the complete server Pod. Repeat on both peers. Keep each PVC and database. Require REST readback, unchanged trust, automatic reconnection, and fresh cross-peer traffic without repeating setup calls.
+- [ ] Interrupt the network and restart the remote peer. Measure recovery against a declared timeout. Reject an untrusted peer and a non-administrator configuration request. Record failures as well as successful reconnects.
+- [ ] Run the same setup, traffic, and persistence checks against a fully standalone remote TAK server. That peer must use an independent supported TAK distribution and its own CA, with no OpenDefence Core, `tak-operator`, Kubernetes, or Linkerd dependency. Test each direction as the connection initiator. Record both TAK versions and endpoint settings.
+
+#### Future Linkerd experiment between two clusters
+
+Use the federation test above as the application check for connecting two separate OpenDefence deployments.
+This experiment is an open future item. It does not replace direct standalone interoperability.
+Follow the pinned Linkerd version's [multicluster guidance](https://linkerd.io/2-edge/tasks/multicluster/).
+Service mirroring supplies local Service addresses for a remote cluster through its gateway.
+Do not assume that one cluster can route directly to the other cluster's ClusterIP.
+
+- [ ] Connect two test clusters with Linkerd multicluster gateways and the required mesh trust. Export only the TAK federation endpoints needed by the test. Keep the two TAK peers distinct. Do not export Ignite, PostgreSQL, or the full stack by default.
+- [ ] Configure outgoing federation with the mirrored Service DNS names and internal ports. Verify DNS, gateway reachability, network policy, and return traffic. Check every advertised mission/file URL as well as the federation socket.
+- [ ] Add an isolated test overlay for the required proxy configuration. The current TAK base explicitly disables Linkerd injection. Preserve TAK TLS and certificate checks through the mesh. Keep mesh trust separate from TAK federation trust. Use [opaque TCP ports](https://linkerd.io/2-edge/features/protocol-detection/) where required by the selected Linkerd version.
+- [ ] Repeat REST setup, group isolation, traffic, container restart, and Pod replacement checks through the mirrored endpoints. Restart a gateway and interrupt the cluster link. Prove recovery without changing peer settings or replacing truststores.
+- [ ] Record the remaining requirements for connecting two complete OpenDefence stacks. A passing TAK federation test establishes only the tested TAK paths.
 
 ### 7. Retire fragile distribution scripts and legacy wrappers
 
@@ -222,6 +254,7 @@ Standalone acceptance uses legacy certificate authentication.
 | Save failures | Private writes cannot overwrite authority. Test persistent backup placement, interrupted owner saves/concurrent reads, disk/permission failure, and separate messaging-owner/API-private file-auth failure with RPC, memory, disk, restart, and retry observations. |
 | Recovery | Messaging-only restart and full replacement restore JNI, HTTPS, CoT, and supported observer/plugin behavior within the declared bound or report explicit failure. |
 | TLS and schema | Coherent renewal changes the served identity while preserving trust separation. Fresh/no-op/upgrade/concurrent/interrupted/retried schema Jobs are safe. |
+| Federation | REST setup and readback, bidirectional traffic, group isolation, persistent peer settings and trust, and automatic recovery after individual container restarts and complete Pod replacement. Repeat against a fully standalone remote TAK distribution. Track the two-cluster Linkerd experiment separately. |
 | Storage and operation | Coordinated restore preserves identities/permissions; uninstall retains data. Test promised reattachment, both architectures, offline install/restart/upgrade, production NetworkPolicy, supported optional roles, and a real federation peer if advertised. |
 | Integration | The actual integration consumes the final JAR/base/image and capability contract. Current Core authority and both applied server revisions determine readiness. |
 
