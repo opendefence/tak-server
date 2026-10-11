@@ -6,6 +6,8 @@ Package TAK Server 5.8 for OpenDefence. The TAK WAR and vendor JARs are pinned
 binary inputs; server behavior changes use external launchers or extensions.
 The native Kubernetes candidate runs config, messaging, and API in one singleton
 StatefulSet. Strict fingerprint authentication is still under implementation.
+Standalone uses legacy TAK certificate authentication; strict approval depends
+on OpenDefence Core User authority and applies only to integrated deployments.
 
 ## Local development
 

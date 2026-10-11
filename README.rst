@@ -30,12 +30,14 @@ administrator through UserManager. Supply the client identity, trusted issuer,
 and matching JKS password Secrets as described in the Kubernetes guide. Keep
 administrator changes and federation trust on the persistent volume; do not
 delete the volume to renew certificates.
+Standalone uses TAK's legacy certificate authentication and does not project
+fingerprint approvals because it has no OpenDefence Core User authority.
 
 Client certificate issuance and package export for the integrated deployment
 belong to `integration-tak <https://github.com/opendefence/integration-tak>`_.
 This image does not create client ZIPs or provide user/admin account wrappers.
-Strict fingerprint mode is under implementation; the current Zarf overlays select
-legacy authentication. See `docs/implementation-plan.md
+Strict fingerprint mode for integrated deployments is under implementation;
+the current Zarf overlays select legacy authentication. See `docs/implementation-plan.md
 <docs/implementation-plan.md>`_ for its remaining acceptance gates.
 
 Build and checks

@@ -64,6 +64,9 @@ The [Core contracts](../../integration-tak/docs/core-contracts.md) remain open a
 Resolve UUID encoding/restore, permission freshness, credential inventory and deadlines, issuance/export authority, namespace/Secret access, UserBinding writers/readiness, HTTP authority, and durable activation reporting.
 Do not invent Core CRDs or treat fixture inputs as an agreed API.
 Agree the trusted management writer, transport, freshness bound, and capability versions with integration.
+Strict fingerprint approval applies only to integrated deployments backed by
+OpenDefence Core User authority. Standalone uses TAK's legacy certificate
+authentication and administrator bootstrap without approval projection.
 
 ### Notify integration when server interfaces are ready
 
@@ -187,8 +190,8 @@ Client preferences and a `client-update-required` outcome belong to integration.
 
 ### 6. Complete standalone operation, CI, and cleanup
 
-- [ ] Provide Kind/existing-cluster standalone overlays and a narrow admin bootstrap Job without Core, RMAPI, integration CRDs/operator, or sibling checkouts. Strict standalone bootstrap must explicitly populate approvals; no implicit admin bypass.
-- [x] Add a local Taskfile using the pinned `opendefence/base` Kind task. In the disposable standalone cluster, generate passwords through ESO, create the CNPG/PostGIS database and managed runtime role, issue JKS identities through cert-manager, deploy with Zarf, and require an authenticated HTTPS smoke check. Production issuer/retention/adoption and strict-mode acceptance remain separate work.
+- [ ] Provide Kind/existing-cluster standalone overlays and a narrow legacy-authentication admin bootstrap Job without Core, RMAPI, integration CRDs/operator, or sibling checkouts. Do not add standalone fingerprint approvals.
+- [x] Add a local Taskfile using the pinned `opendefence/base` Kind task. In the disposable standalone cluster, generate passwords through ESO, create the CNPG/PostGIS database and managed runtime role, issue JKS identities through cert-manager, deploy with Zarf, and require an authenticated HTTPS smoke check. Production issuer/retention/adoption remain open; strict-mode acceptance belongs to integrated deployment.
 - [ ] Expose appropriate CoT/federation TCP services and preserve TAK `/Marti` mTLS semantics separately from `/integrations/tak/api/v1`.
 - [ ] Finish native replacement checks after removing Compose deployment, obsolete OSS build, RM bootstrap, duplicate user/ZIP wrappers, and Azure/DevSpace paths. Retain `build_compose.yml` for distribution builds, optional pinned APK/update content, and historical LFS data.
 - [ ] Provide coordinated backup/restore for database, XML, file-auth, trust, content, and identities. Uninstall must retain data. Integration separately excludes live grants from restore.
@@ -215,7 +218,7 @@ Remove the six named scripts from supported workflows and image packaging. Do no
 - [ ] Audit direct calls, sourced files, transitive vendor helpers, image entrypoints, and copy operations against the pinned distribution. Include optional plugin/retention roles, schema tooling, tests, CI, README, AGENTS, and integration consumers. Record each remaining dependency and its replacement before removal.
 - [ ] Reuse `user_manager.py` and existing launchers only where their binary interface meets the required contract. The maintained `user-manager.sh` no longer sources `setenv.sh`, but strict complete-set projection still needs slice 4's interface.
 - [ ] Update supported commands, fixtures, tests, image copies, environment variables, and dependencies together. Retain historical reports as evidence. Stop executing stale helper copies on existing PVCs; never wipe a PVC to remove scripts.
-- [ ] Prove fresh and repeated standalone bootstrap, identity import/renewal, user enable/disable, admin promotion/demotion, and single-leaf revocation. Verify preserved UUID, groups, other approved leaves, and administrator federation trust. Verify client package import in the owning integration workflow.
+- [ ] Prove fresh and repeated standalone bootstrap, identity import/renewal, user enable/disable, and admin promotion/demotion while preserving administrator federation trust. Prove single-leaf approval removal, preserved UUID/groups/other approved leaves, and client package import in the integrated workflow.
 - [ ] Require an image/caller check that supported startup, management, migration, and package workflows do not execute these scripts. Repeat binary compatibility checks for each TAK release before removing the last fallback.
 
 ## T3 acceptance and T4 fixes
@@ -223,6 +226,8 @@ Remove the six named scripts from supported workflows and image packaging. Do no
 T3 uses `gpt-6-astra` / `high`; T4 uses `gpt-6.1-sol` / `high`.
 Escalate unexplained runtime/design behavior through T1 `gpt-6-astra` / `xhigh` with a reproduction.
 Use the final image, base, external extension/configuration, and vendor/management JAR tuple together. Preserve sanitized inputs, checksums, assertions, outcomes, and limits.
+Strict admission, projection, and authentication-evidence checks apply to the
+integrated deployment. Standalone acceptance uses legacy certificate authentication.
 
 | Area | Required evidence |
 | --- | --- |

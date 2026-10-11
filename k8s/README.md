@@ -2,7 +2,9 @@
 
 This base runs TAK 5.8.92 as config, messaging, and API containers in one singleton StatefulSet.
 The image includes the external plugin launcher. The base does not enable plugin manager or retention.
-The candidate supports explicit legacy authentication. Strict authentication remains under implementation.
+Standalone uses legacy TAK certificate authentication and does not require
+OpenDefence Core User semantics or fingerprint approval projection.
+Strict authentication is reserved for integrated deployments and remains under implementation.
 Selecting `TAK_AUTH_MODE=strict` installs the pinned admission agent in messaging and API.
 Its approval state starts empty, so client access and the current probe readiness fail
 until a trusted projection is implemented. Do not use this candidate as a strict-authentication release.
@@ -54,7 +56,7 @@ The grants Job gives the runtime account data access after the schema Job comple
 Use issuer-managed or supplied native JKS stores. The tested cert-manager private-key alias is `certificate`.
 Match `TAK_SERVER_ADDRESS` to the served HTTPS certificate's DNS name.
 The probe certificate must be trusted for client authentication. The bootstrap Job registers it as an administrator through UserManager.
-This is the legacy standalone bootstrap path. It is not an implicit strict-mode exception.
+This is the standalone legacy bootstrap path; it does not populate strict approvals.
 The probe identity has administrator access; restrict Secret access to the installation owner.
 The Job mounts only its public certificate. Application containers mount its client key for the authenticated read.
 Ordinary Pods do not mount issuer CA signing keys.
