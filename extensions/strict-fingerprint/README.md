@@ -18,6 +18,7 @@ It rejects repeated attribute types inside a CN-containing relative distinguishe
 It checks leaf validity and rejects CA certificates.
 The caller must already have validated the TLS certificate chain and client-certificate usage.
 In the integrated overlay, the API JVM can also admit the exact certificate in the integration-owned `tak-integration-admin/tls.crt` Secret. This permits the separate operator to use TAK's existing 8443 REST API after it registers the certificate as an administrator through JNI. The issuer must be trusted by TAK's client truststore. The exception is absent from messaging and does not grant a vendor role by itself; Spring/TAK authorization still runs. Missing or malformed Secret data denies this path.
+This pin is installed identity, not a second approval workflow. Other installed integrations may need 8443 or 8089. Their general manifest-derived identity registry and both-JVM admission are still open; never accept a certificate merely because its CN looks like an integration or its serial matches without issuer and manifest identity.
 
 Each update replaces one account's complete accepted set. Reads see one immutable snapshot.
 Updates require the current revision. Exactly one competing update can use that revision.
