@@ -229,14 +229,21 @@ class CoreConfigTest(unittest.TestCase):
             )
 
     def test_conflicting_admin_port_is_not_overwritten(self) -> None:
-        saved = coreconfig.read_xml(self.template)
-        listener = coreconfig.require(saved, "network/input[@_name='stdssl-noarchive']")
-        listener.set("_name", "admin-listener")
-        self.save(saved)
-        before = self.destination.read_bytes()
-        with self.assertRaisesRegex(ValueError, "Duplicate tcp listener on port 8090"):
-            self.prepare()
-        self.assertEqual(self.destination.read_bytes(), before)
+        for port in ("8090", "08090"):
+            with self.subTest(port=port):
+                saved = coreconfig.read_xml(self.template)
+                listener = coreconfig.require(
+                    saved, "network/input[@_name='stdssl-noarchive']"
+                )
+                listener.set("_name", "admin-listener")
+                listener.set("port", port)
+                self.save(saved)
+                before = self.destination.read_bytes()
+                with self.assertRaisesRegex(
+                    ValueError, "Duplicate tcp listener on port 8090"
+                ):
+                    self.prepare()
+                self.assertEqual(self.destination.read_bytes(), before)
 
     def test_ldap_can_be_enabled_and_disabled(self) -> None:
         self.prepare()

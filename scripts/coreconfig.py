@@ -152,7 +152,7 @@ def merge(saved: etree._Element, template: etree._Element) -> etree._Element:
         + select(result, "network/datafeed")
         + select(result, "network/connector")
     ):
-        port = node.get("port")
+        port = int(node.get("port", "0"))
         protocol = node.get("protocol", "tls")
         transport = "udp" if protocol in ("udp", "mcast", "quic") else "tcp"
         endpoint = (transport, node.get("iface", ""), port)
