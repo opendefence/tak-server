@@ -50,6 +50,16 @@ class StartupTest(unittest.TestCase):
             self.assertRaisesRegex(RuntimeError, "Strict authentication injection"),
         ):
             start_tak.main()
+        self.assertFalse((self.data / ".coreconfig-service.lock").exists())
+
+    def test_unknown_auth_mode_fails_before_storage_changes(self) -> None:
+        with (
+            patch.dict(os.environ, TAK_AUTH_MODE="unknown"),
+            patch.object(sys, "argv", ["start_tak.py", "config"]),
+            self.assertRaisesRegex(RuntimeError, "select a supported mode"),
+        ):
+            start_tak.main()
+        self.assertFalse((self.data / ".coreconfig-service.lock").exists())
 
     def test_prepares_one_authority_and_preserves_admin_restart_changes(self) -> None:
         shutil.copy("/opt/tak/CoreConfig.xsd", self.root / "CoreConfig.xsd")

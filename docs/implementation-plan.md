@@ -150,7 +150,7 @@ Then test password and trust rotation, automatic issuer renewal, and the actual 
   [vendor compatibility probe](t2-strict-hook-inspection.md). It rejects other
   artifact hashes and changed inspected signatures; it does not install hooks.
 - [x] Implement an external launcher/extension for messaging and API. The agent pins the vendor tuple and transformed class bytes, verifies both classloader paths before TAK startup, and fails closed on missing/incompatible injection. Live negative CoT/HTTP checks passed; approved-client and revocation acceptance remain below.
-- [ ] Add an explicit strict file-auth mode in validated extension configuration. Keep new settings outside the unchanged vendor CoreConfig schema. Fail startup if required injection is absent or incompatible. Invalid or unavailable strict state must deny access without falling back to legacy mode.
+- [x] Add explicit `TAK_AUTH_MODE` startup validation outside the vendor CoreConfig schema. A missing/incompatible agent fails strict startup; empty, invalidated, or restarted approval state denies access without a legacy fallback. Keep separate future management settings outside the vendor schema.
 - [ ] Expose a trusted complete-set update for one UUID's approved leaf fingerprints, explicit deadline, and conditional revision. Provide immutable readback and clear conflicts, failures, and limit errors.
 - [ ] Apply and acknowledge the projection in both messaging and API JVMs. Bind permission and credential readback to the requested projection; preserve roles, groups, and the UUID account when one leaf is removed. Resolve uncertain writes by readback before retry.
 - [ ] Define the owner that invalidates approval on stale/unavailable authority and enforces its freshness bound. Missing, expired, invalidated, and restarted state must deny access.
@@ -250,5 +250,5 @@ Do not advertise strict authentication or production readiness before the couple
 
 ## LDAP interval binary compatibility follow-up
 
-- [ ] Whenever the TAK Server binary version changes, inspect the actual bytecode of every `updateinterval` consumer and verify the effective refresh timing in a running server. Remove the temporary `6000` default once bytecode establishes the actual behavior and runtime testing agrees; then set a release-verified value explicitly where needed.
-- [ ] For `5.8-RELEASE-92`, complete a timed LDAP refresh test before changing the `6000` default. [Release-92 evidence](release-92-candidate.md) records both inspected consumers; their bytecode indicates seconds, while earlier practical testing observed milliseconds.
+- [x] For `5.8-RELEASE-92`, inspect the direct consumers and their downstream timing paths. [Release-92 evidence](release-92-candidate.md) establishes seconds in both; restore the default to `60`. The second practical test was inconclusive.
+- [ ] Whenever the TAK Server binary version changes, inspect the actual bytecode of every `updateinterval` consumer and its downstream scheduler/comparison before retaining `60`; verify effective timing in a running LDAP setup when available.

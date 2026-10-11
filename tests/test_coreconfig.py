@@ -249,7 +249,7 @@ class CoreConfigTest(unittest.TestCase):
             coreconfig.require(enabled, "auth/ldap").get("url"), "ldap://directory.test"
         )
         self.assertEqual(
-            coreconfig.require(enabled, "auth/ldap").get("updateinterval"), "6000"
+            coreconfig.require(enabled, "auth/ldap").get("updateinterval"), "60"
         )
         self.environment["LDAP_UPDATE_INTERVAL"] = "120"
         self.render_template()

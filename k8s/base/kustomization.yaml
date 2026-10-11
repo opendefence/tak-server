@@ -13,7 +13,7 @@ configMapGenerator:
   - name: tak-settings
     literals:
       - TAK_AUTH_MODE=legacy
-      - LDAP_UPDATE_INTERVAL=6000
+      - LDAP_UPDATE_INTERVAL=60
       - TAK_SERVER_ADDRESS=tak.example.invalid
       - TAK_IGNITE_SEEDS=tak-ignite:47500
       - TAK_IGNITE_POOL_SIZE=2
