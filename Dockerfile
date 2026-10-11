@@ -71,6 +71,47 @@ RUN jar --extract --file /tmp/takserver-pm.jar BOOT-INF/classes BOOT-INF/lib \
 
 # Keep the distribution archive and build tools out of runtime layers.
 FROM deps AS install
+ENV IGNITE_HOME=/opt/tak \
+    JDK_JAVA_OPTIONS="-Dio.netty.tmpdir=/opt/tak -Djava.io.tmpdir=/opt/tak -Dio.netty.native.workdir=/opt/tak -Djava.net.preferIPv4Stack=true -Djava.security.egd=file:/dev/./urandom -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_QUIET=true -Djdk.tls.client.protocols=TLSv1.2 \
+--add-opens=java.base/sun.security.pkcs=ALL-UNNAMED \
+--add-opens=java.base/sun.security.pkcs10=ALL-UNNAMED \
+--add-opens=java.base/sun.security.util=ALL-UNNAMED \
+--add-opens=java.base/sun.security.x509=ALL-UNNAMED \
+--add-opens=java.base/sun.security.tools.keytool=ALL-UNNAMED \
+--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED \
+--add-opens=java.base/sun.nio.ch=ALL-UNNAMED \
+--add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
+--add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
+--add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
+--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
+--add-opens=java.base/java.io=ALL-UNNAMED \
+--add-opens=java.base/java.nio=ALL-UNNAMED \
+--add-opens=java.base/java.util=ALL-UNNAMED \
+--add-opens=java.base/java.util.concurrent=ALL-UNNAMED \
+--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED \
+--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED \
+--add-opens=java.base/java.lang=ALL-UNNAMED \
+--add-opens=java.base/java.lang.invoke=ALL-UNNAMED \
+--add-opens=java.base/java.math=ALL-UNNAMED \
+--add-opens=java.sql/java.sql=ALL-UNNAMED \
+--add-opens=java.base/javax.net.ssl=ALL-UNNAMED \
+--add-opens=java.base/java.net=ALL-UNNAMED \
+--add-opens=jdk.unsupported/sun.misc=ALL-UNNAMED \
+--add-opens=java.base/java.lang.ref=ALL-UNNAMED \
+--add-opens=java.base/java.lang.reflect=ALL-UNNAMED \
+--add-opens=java.base/java.security=ALL-UNNAMED \
+--add-opens=java.base/java.security.ssl=ALL-UNNAMED \
+--add-opens=java.base/java.security.cert=ALL-UNNAMED \
+--add-opens=java.base/sun.security.provider.certpath=ALL-UNNAMED \
+--add-opens=java.base/sun.security.rsa=ALL-UNNAMED \
+--add-opens=java.base/sun.security.ssl=ALL-UNNAMED \
+--add-opens=java.base/sun.security.validator=ALL-UNNAMED \
+--add-opens=java.base/sun.security.x500=ALL-UNNAMED \
+--add-opens=jdk.crypto.cryptoki/sun.security.pkcs11=ALL-UNNAMED \
+--add-opens=java.base/sun.security.pkcs12=ALL-UNNAMED \
+--add-opens=java.base/sun.security.provider=ALL-UNNAMED \
+--add-opens=java.base/javax.security.auth.x500=ALL-UNNAMED \
+--add-opens=java.base/java.time=ALL-UNNAMED"
 COPY --from=unpack /opt/tak /opt/tak
 COPY --from=plugin-launcher /tmp/pvarki-launcher.jar /opt/tak/lib/pvarki-launcher.jar
 COPY --from=plugin-launcher /tmp/strict-fingerprint-agent.jar /opt/tak/lib/strict-fingerprint-agent.jar
