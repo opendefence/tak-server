@@ -1,6 +1,6 @@
 # Consolidated implementation plan
 
-Updated: 2026-10-10. Branch: `implementation/t0-foundation`.
+Updated: 2026-10-11. Branch: `implementation/t0-foundation`.
 This plan combines the completed T1 packaging decisions with the adopted strict fingerprint work.
 The [checkpoint](implementation-status.md) records current progress and the next model gate.
 
@@ -44,7 +44,7 @@ Policy tests do not establish TLS, CoT, HTTP, or session enforcement in TAK.
 
 ## Dependencies and ownership
 
-Keep the pinned TAK `5.8-RELEASE-84` WAR and vendor JARs unchanged on disk.
+Keep the pinned TAK `5.8-RELEASE-92` WAR and vendor JARs unchanged on disk.
 Compile external extension code against those artifacts. Record their checksums and the extension build provenance.
 Use the [plugin launcher](../bugreports/006-pluginmanager-forces-localhost/HANDOFF.md) as the starting pattern.
 First inspect the exact binary's startup, Spring, and authentication paths for replaceable components.
@@ -251,3 +251,4 @@ Do not advertise strict authentication or production readiness before the couple
 ## LDAP interval binary compatibility follow-up
 
 - [ ] Whenever the TAK Server binary version changes, inspect the actual bytecode of every `updateinterval` consumer and verify the effective refresh timing in a running server. Remove the temporary `6000` default once bytecode establishes the actual behavior and runtime testing agrees; then set a release-verified value explicitly where needed.
+- [ ] For `5.8-RELEASE-92`, complete a timed LDAP refresh test before changing the `6000` default. [Release-92 evidence](release-92-candidate.md) records both inspected consumers; their bytecode indicates seconds, while earlier practical testing observed milliseconds.

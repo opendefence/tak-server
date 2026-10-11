@@ -2,7 +2,7 @@ apiVersion: zarf.dev/v1alpha1
 kind: ZarfPackageConfig
 metadata:
   name: tak-server
-  version: 5.8.84-candidate
+  version: 5.8.92-candidate
   description: TAK Server Kubernetes candidate, standalone or integrated
 constants:
   - name: TAK_IMAGE
@@ -53,14 +53,14 @@ components:
         kustomizations:
           - k8s/zarf/schema
     healthChecks:
-      - {apiVersion: batch/v1, kind: Job, name: tak-schema-5-8-84, namespace: tak-server}
+      - {apiVersion: batch/v1, kind: Job, name: tak-schema-5-8-92, namespace: tak-server}
     actions:
       onDeploy:
         after:
           - description: TAK schema migration to complete
             maxTotalSeconds: 900
             wait:
-              cluster: {kind: job, name: tak-schema-5-8-84, namespace: tak-server, condition: complete}
+              cluster: {kind: job, name: tak-schema-5-8-92, namespace: tak-server, condition: complete}
   - name: standalone-grants
     required: true
     only: {flavor: standalone}
@@ -72,14 +72,14 @@ components:
         kustomizations:
           - k8s/zarf/grants
     healthChecks:
-      - {apiVersion: batch/v1, kind: Job, name: tak-grants-5-8-84, namespace: tak-server}
+      - {apiVersion: batch/v1, kind: Job, name: tak-grants-5-8-92, namespace: tak-server}
     actions:
       onDeploy:
         after:
           - description: TAK runtime grants to complete
             maxTotalSeconds: 180
             wait:
-              cluster: {kind: job, name: tak-grants-5-8-84, namespace: tak-server, condition: complete}
+              cluster: {kind: job, name: tak-grants-5-8-92, namespace: tak-server, condition: complete}
   - name: standalone-server
     required: true
     only: {flavor: standalone}
@@ -103,14 +103,14 @@ components:
         kustomizations:
           - k8s/zarf/integrated-schema
     healthChecks:
-      - {apiVersion: batch/v1, kind: Job, name: tak-schema-5-8-84, namespace: integration-tak}
+      - {apiVersion: batch/v1, kind: Job, name: tak-schema-5-8-92, namespace: integration-tak}
     actions:
       onDeploy:
         after:
           - description: TAK schema migration to complete
             maxTotalSeconds: 900
             wait:
-              cluster: {kind: job, name: tak-schema-5-8-84, namespace: integration-tak, condition: complete}
+              cluster: {kind: job, name: tak-schema-5-8-92, namespace: integration-tak, condition: complete}
   - name: integrated-grants
     required: true
     only: {flavor: integrated}
@@ -122,14 +122,14 @@ components:
         kustomizations:
           - k8s/zarf/integrated-grants
     healthChecks:
-      - {apiVersion: batch/v1, kind: Job, name: tak-grants-5-8-84, namespace: integration-tak}
+      - {apiVersion: batch/v1, kind: Job, name: tak-grants-5-8-92, namespace: integration-tak}
     actions:
       onDeploy:
         after:
           - description: TAK runtime grants to complete
             maxTotalSeconds: 180
             wait:
-              cluster: {kind: job, name: tak-grants-5-8-84, namespace: integration-tak, condition: complete}
+              cluster: {kind: job, name: tak-grants-5-8-92, namespace: integration-tak, condition: complete}
   - name: integrated-server
     required: true
     only: {flavor: integrated}

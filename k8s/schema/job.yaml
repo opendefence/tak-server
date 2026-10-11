@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: tak-schema-5-8-84
+  name: tak-schema-5-8-92
   labels:
     app.kubernetes.io/name: tak-server
     app.kubernetes.io/component: schema
@@ -18,7 +18,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: schema
-          image: tak-server:5.8.84
+          image: tak-server:5.8.92
           command: [java]
           args:
             - -cp

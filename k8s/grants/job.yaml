@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: tak-grants-5-8-84
+  name: tak-grants-5-8-92
   labels:
     app.kubernetes.io/name: tak-server
     app.kubernetes.io/component: grants
@@ -18,7 +18,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: grants
-          image: tak-server:5.8.84
+          image: tak-server:5.8.92
           command: [/bin/sh, -ec]
           args:
             - |

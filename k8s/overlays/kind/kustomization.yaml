@@ -5,7 +5,7 @@ resources:
 images:
   - name: tak-server
     newName: localhost/tak-server
-    newTag: t2-layout-5.8.84
+    newTag: release-92
 patches:
   - target: {kind: StatefulSet, name: tak-server}
     patch: |-

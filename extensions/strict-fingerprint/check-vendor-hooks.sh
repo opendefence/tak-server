@@ -4,8 +4,8 @@ set -eu
 war=${1:?usage: check-vendor-hooks.sh takserver.war UserManager.jar}
 user_manager=${2:?usage: check-vendor-hooks.sh takserver.war UserManager.jar}
 war=$(realpath "$war")
-expected_war=64309513e45ba1e92084d457cd787b35d1c570ab918a11fd1ce1e5bdd4d6f26c
-expected_user_manager=4ad7adcb9a09156d7122bfb2d4ddf3fd6705fb612f4d521335a5e08b449d24f6
+expected_war=9f03a3c21e5ed09350fd92a2c16fed0dca246122dfb8f266e4179f3ca4134523
+expected_user_manager=0fe547c2f4ce05d06a2e9724e0c2837eab0a0ba5be398390bb974b2385ce6f14
 
 check_hash() {
     actual=$(sha256sum "$2" | cut -d ' ' -f 1)
@@ -48,4 +48,4 @@ fi
 grep -Fq 'X509AuthenticationFilter,' WEB-INF/classes/security-context.xml
 grep -Fq 'FilterSecurityInterceptor" />' WEB-INF/classes/security-context.xml
 grep -Fq 'class="com.bbn.marti.util.spring.TakAuthenticationProvider"' WEB-INF/classes/security-context.xml
-echo 'Pinned TAK 5.8.84 authentication seams match'
+echo 'Pinned TAK 5.8.92 authentication seams match'

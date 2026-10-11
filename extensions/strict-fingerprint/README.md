@@ -60,7 +60,7 @@ The policy now checks the RDN's attribute count before accepting its CN.
 
 ## Required server wiring
 
-Fresh server source will not be available. Keep the pinned TAK 5.8.84 vendor artifacts unchanged on disk.
+Fresh server source will not be available. Keep the pinned TAK 5.8.92 vendor artifacts unchanged on disk.
 Compile an external extension against those binaries, following the [plugin launcher pattern](../../bugreports/006-pluginmanager-forces-localhost/HANDOFF.md).
 Inspect the exact call paths before choosing launcher/component replacement or, if needed, a Java instrumentation agent.
 The plugin workaround proves its own startup path, not authentication coverage.

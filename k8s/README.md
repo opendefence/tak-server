@@ -1,6 +1,6 @@
 # Native Kubernetes candidate
 
-This base runs TAK 5.8.84 as config, messaging, and API containers in one singleton StatefulSet.
+This base runs TAK 5.8.92 as config, messaging, and API containers in one singleton StatefulSet.
 The image includes the external plugin launcher. The base does not enable plugin manager or retention.
 The candidate supports explicit legacy authentication. Strict authentication remains under implementation.
 Selecting `TAK_AUTH_MODE=strict` installs the pinned admission agent in messaging and API.
@@ -94,9 +94,10 @@ and legacy authentication mode are fixed by this candidate. Compose-only CA
 generation, admin certificate, and mission-package environment variables are not
 used by the native deployment.
 `LDAP_UPDATE_INTERVAL` is a Zarf parameter when LDAP is configured. Practical
-testing of the pinned TAK 5.8.84 binary found millisecond behavior, so the
-tested default is `6000`. Recheck both consumers against actual bytecode and
-runtime behavior whenever the TAK binary changes (see the implementation plan).
+testing of the preceding TAK 5.8.84 binary found millisecond behavior, so the
+provisional default remains `6000`. The 5.8.92 consumer bytecode indicates
+seconds; verify effective timing in a running LDAP setup before changing the
+default (see the implementation plan).
 The template also sets `MissionStrictUidMissionMembership=false` for new installs.
 Existing administrator XML with an explicit value keeps that choice; a missing
 value is filled with `false` during the next configuration merge.
@@ -126,7 +127,7 @@ creation, while values are substituted at deployment.
 
 Build the image with the repository Dockerfile. Override `JAVA_RUNTIME_IMAGE` and `JAVA_BUILD_IMAGE` with pinned images.
 Pin the candidate image in an overlay before applying it. A publishing destination is not yet enabled.
-The Kind overlay selects the local `localhost/tak-server:t2-layout-5.8.84` test image and disables pulls.
+The Kind overlay selects the local `localhost/tak-server:release-92` test image and disables pulls.
 Load that image into the intended Kind cluster before applying the overlay.
 
 Create a local overlay that consumes `k8s/base`, `k8s/overlays/standalone`, or `k8s/overlays/integrated`.
@@ -150,9 +151,9 @@ Apply and wait for both versioned Jobs before starting the server:
 ```sh
 TAK_NAMESPACE=tak-server # use integration-tak for the integrated overlay
 kubectl apply -k path/to/schema-overlay
-kubectl -n "$TAK_NAMESPACE" wait --for=condition=complete job/tak-schema-5-8-84 --timeout=900s
+kubectl -n "$TAK_NAMESPACE" wait --for=condition=complete job/tak-schema-5-8-92 --timeout=900s
 kubectl apply -k path/to/grants-overlay
-kubectl -n "$TAK_NAMESPACE" wait --for=condition=complete job/tak-grants-5-8-84 --timeout=180s
+kubectl -n "$TAK_NAMESPACE" wait --for=condition=complete job/tak-grants-5-8-92 --timeout=180s
 ```
 
 The Job uses Flyway and the migrations bundled in the pinned `SchemaManager.jar`.

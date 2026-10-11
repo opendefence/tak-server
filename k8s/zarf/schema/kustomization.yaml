@@ -4,7 +4,7 @@ namespace: tak-server
 resources:
   - ../../schema
 patches:
-  - target: {kind: Job, name: tak-schema-5-8-84}
+  - target: {kind: Job, name: tak-schema-5-8-92}
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/image

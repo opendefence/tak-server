@@ -17,7 +17,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: register
-          image: tak-server:5.8.84
+          image: tak-server:5.8.92
           args: [/opt/scripts/user-manager.sh, certmod, -A, /probe/tls.crt]
           env:
             - {name: TAK_MESSAGING_HOST, value: tak-ignite}

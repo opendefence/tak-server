@@ -24,7 +24,7 @@ spec:
       terminationGracePeriodSeconds: 60
       initContainers:
         - name: volume
-          image: tak-server:5.8.84
+          image: tak-server:5.8.92
           args: [/usr/bin/python3, /opt/scripts/initialize_volume.py]
           env:
             - name: CA_PASS
@@ -40,7 +40,7 @@ spec:
       containers:
         - &role
           name: config
-          image: tak-server:5.8.84
+          image: tak-server:5.8.92
           args: [/opt/scripts/start-tak.sh, config]
           envFrom:
             - configMapRef: {name: tak-settings}

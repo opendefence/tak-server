@@ -16,8 +16,8 @@ import javassist.LoaderClassPath;
 
 /** Pins transformed class bytes and halts on any incomplete strict installation. */
 public final class StrictFingerprintAgent {
-    private static final String WAR = "64309513e45ba1e92084d457cd787b35d1c570ab918a11fd1ce1e5bdd4d6f26c";
-    private static final String USER_MANAGER = "4ad7adcb9a09156d7122bfb2d4ddf3fd6705fb612f4d521335a5e08b449d24f6";
+    private static final String WAR = "9f03a3c21e5ed09350fd92a2c16fed0dca246122dfb8f266e4179f3ca4134523";
+    private static final String USER_MANAGER = "0fe547c2f4ce05d06a2e9724e0c2837eab0a0ba5be398390bb974b2385ce6f14";
     private static final String CODEC = "com/bbn/marti/nio/codec/impls/X509AuthCodec";
     private static final String AUTHENTICATOR = "com/bbn/marti/groups/X509Authenticator";
     private static final String HTTP = "org/springframework/security/web/access/intercept/FilterSecurityInterceptor";
