@@ -189,12 +189,21 @@ Use the same API as the web UI. Do not seed peer configuration by editing XML fo
 The pinned `5.8-RELEASE-92` WAR contains these routes in `Marti/federation/js/services.js`:
 `/Marti/api/federationconfig`, `/Marti/api/federates`, `/Marti/api/federatedetails/{id}`,
 `/Marti/api/federategroups/{id}`, `/Marti/api/outgoingconnections/{name}`, and `/Marti/api/activeconnections`.
-These are inspection evidence. Live federation setup remains untested.
+The [native federation test](../tests/federation/README.md) uses these APIs against the pinned server.
+It imports CA trust with `POST /Marti/api/federatecertificates` and a multipart `file` field.
+It creates a version 2 outgoing connection with `POST /Marti/api/outgoingconnections`.
+It assigns bidirectional group permissions with `POST /Marti/api/federategroups`.
+The runner checks administrator access and denies ordinary-client settings reads and group updates.
+It verifies cross-server CoT before and after each restart.
+The test runs on demand. Its helper unit tests run in the existing CI test suite.
 
-- [ ] Confirm the exact REST methods, request bodies, certificate upload route, and authorization rules against the pinned server. Use verified HTTPS and a distinct administrator identity on each server. Record sanitized requests and readback assertions.
-- [ ] Import peer trust through the supported API. Create peer identities, group mappings, and an outgoing connection. Read them back through REST and confirm that the web UI shows the same state.
-- [ ] Prove bidirectional CoT delivery between clients on different servers. Verify permitted groups and reject traffic outside those groups. Check mission and file transfer for each enabled federation feature, including advertised HTTPS URLs and their required ports.
-- [ ] Record parsed peer configuration, group mappings, and federation trust entries before restart. Restart config, messaging, and API containers separately. Then replace the complete server Pod. Repeat on both peers. Keep each PVC and database. Require REST readback, unchanged trust, automatic reconnection, and fresh cross-peer traffic without repeating setup calls.
+- [x] Confirm REST methods and request bodies for CA upload, outgoing connections, and group permissions against the pinned server. Use verified HTTPS and a distinct administrator identity on each server. Reject ordinary-client reads and group updates. Record requests in the test and sanitized state in `outputs/federation/result.json`.
+- [x] Import peer trust through the supported API. Discover certificate peer identities. Assign group permissions and create an outgoing connection. Read them back through REST.
+- [x] Prove bidirectional CoT delivery between clients on different native servers in a permitted group.
+- [x] Record peer identities, outgoing connection settings, group permissions, and federation trust before restart. Restart config, messaging, and API containers separately. Then replace the complete server Pod. Repeat on both native peers. Keep each PVC and database. Require REST readback, unchanged trust, automatic reconnection, and fresh cross-peer traffic without repeating setup calls. The 2026-10-12 run passed all nine stages.
+- [ ] Test explicit group mappings and reject traffic outside permitted groups. Confirm that the web UI shows the same state as REST. Repeat restart checks with these mappings.
+- [ ] Check mission and file transfer for each enabled federation feature, including advertised HTTPS URLs and their required ports.
+- [ ] Test trust changes while federation is active. During exploratory setup, a repeated CA upload caused `duplicate federation connection` and disabled the outgoing connection. The test runner reuses existing trust entries. Investigate live trust reload separately.
 - [ ] Interrupt the network and restart the remote peer. Measure recovery against a declared timeout. Reject an untrusted peer and a non-administrator configuration request. Record failures as well as successful reconnects.
 - [ ] Run the same setup, traffic, and persistence checks against a fully standalone remote TAK server. That peer must use an independent supported TAK distribution and its own CA, with no OpenDefence Core, `tak-operator`, Kubernetes, or Linkerd dependency. Test each direction as the connection initiator. Record both TAK versions and endpoint settings.
 

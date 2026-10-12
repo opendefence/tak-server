@@ -33,6 +33,9 @@ The local `task tak` restarts the whole server Pod after Zarf applies so repeate
 The local Zarf deployment uses a ClusterIP Service because Kind has no load balancer; the normal standalone package defaults to LoadBalancer. Use `kubectl --kubeconfig outputs/local/kubeconfig -n tak-server port-forward svc/tak-server 8443:8443` for local access. The test CA and admin probe identity are for this disposable cluster only.
 `mise exec -- task --yes down` deletes that cluster, including its database and identities. It does not target other Kind clusters.
 
+Use the [federation acceptance test](../tests/federation/README.md) to test two independent TAK instances.
+It checks REST setup, cross-server CoT, retained trust, and restart recovery.
+
 ## Required inputs
 
 Supply a same-namespace CloudNativePG Cluster named `tak-database`, bootstrapped

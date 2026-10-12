@@ -1,4 +1,4 @@
-"""Verify two issued clients exchange CoT through the supplied TLS endpoint."""
+"""Verify two issued clients exchange CoT through one or two TLS endpoints."""
 
 import argparse
 import socket
@@ -28,19 +28,31 @@ def main() -> None:
     parser.add_argument("--server-name", required=True)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8089)
+    parser.add_argument("--peer-host")
+    parser.add_argument("--peer-port", type=int)
+    parser.add_argument("--peer-server-name")
     args = parser.parse_args()
     with ExitStack() as stack:
         clients = []
-        for name in ("client-a", "client-b"):
+        endpoints = (
+            ("client-a", args.host, args.port, args.server_name),
+            (
+                "client-b",
+                args.peer_host or args.host,
+                args.peer_port or args.port,
+                args.peer_server_name or args.server_name,
+            ),
+        )
+        for name, host, port, server_name in endpoints:
             context = ssl.create_default_context(cafile=args.cert_dir / "ca.pem")
             context.load_cert_chain(
                 args.cert_dir / f"{name}.pem", args.cert_dir / f"{name}.key"
             )
             raw = stack.enter_context(
-                socket.create_connection((args.host, args.port), timeout=10)
+                socket.create_connection((host, port), timeout=10)
             )
             connection = stack.enter_context(
-                context.wrap_socket(raw, server_hostname=args.server_name)
+                context.wrap_socket(raw, server_hostname=server_name)
             )
             clients.append(connection)
         for connection in clients:
