@@ -401,6 +401,32 @@ Kind policy objects are not evidence of enforcement by a production CNI.
 Expose extra administrator-created listeners through additional Service and NetworkPolicy entries.
 Keep `/Marti` TLS client authentication intact when adding external routing.
 
+## Logs
+
+Application logs use Elastic Common Schema (ECS) JSON on stdout and in retained files.
+This applies to config, messaging, API, retention, and plugin manager roles.
+Each event includes a timestamp, log level, logger name, and `service.name`.
+The default service name is `tak-server-ROLE`, for example `tak-server-api`.
+Set `LOGGING_STRUCTURED_ECS_SERVICE_NAME` to change it.
+Exceptions include their type, message, and stack trace in one JSON record.
+Existing audit context fields remain in the records.
+
+Startup creates an external copy of the vendor logging configuration.
+It uses the [Spring Boot ECS encoder](https://docs.spring.io/spring-boot/3.5/reference/features/logging.html#features.logging.structured).
+It preserves file paths, rotation, filters, and audit routing.
+It does not change vendor WAR or JAR files.
+Set `LOGGING_CONFIG` to supply a custom logging configuration instead.
+Replace the server Pod after a logging configuration change.
+
+Early bootstrap messages and direct JVM or vendor console output can remain plain text.
+Existing retained records keep their old format. New application records use ECS JSON.
+The image check exercises ECS fields, message escaping, exceptions, audit context,
+and retained files with the pinned logging libraries:
+
+```sh
+bash tests/test-ecs-logging.sh IMAGE
+```
+
 ## State and replacement
 
 `tak-data` persists the authoritative CoreConfig, messaging file-auth, logs, and existing certificate/federation state.

@@ -90,6 +90,7 @@ jobs:
             --entrypoint /usr/bin/python3 "$TAK_TEST_IMAGE" \
             -B -m unittest discover -s /workspace/tests -v
           sh tests/test-strict-agent.sh "$TAK_TEST_IMAGE"
+          bash tests/test-ecs-logging.sh "$TAK_TEST_IMAGE"
           for test in test-server-launcher test-api-keystore; do
             docker run --rm --pull=never -v "$PWD:/workspace:ro" \
               --entrypoint /bin/bash "$TAK_TEST_IMAGE" "/workspace/tests/$test.sh"

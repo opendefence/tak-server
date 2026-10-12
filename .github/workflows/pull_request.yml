@@ -87,6 +87,8 @@ jobs:
         run: sh tests/test-strict-agent.sh "$TAK_TEST_IMAGE"
       - name: Verify vendor launcher and retired helpers
         run: docker run --rm --pull=never -v "$PWD:/workspace:ro" --entrypoint /bin/bash "$TAK_TEST_IMAGE" /workspace/tests/test-server-launcher.sh
+      - name: Verify ECS logging with the pinned vendor libraries
+        run: bash tests/test-ecs-logging.sh "$TAK_TEST_IMAGE"
       - name: Test HTTPS keystore selection
         run: |
           docker run --rm --pull=never --network none -v "$PWD:/workspace:ro" \
