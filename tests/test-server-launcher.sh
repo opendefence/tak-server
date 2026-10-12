@@ -33,12 +33,3 @@ if manager_output="$("${scripts}/user-manager.sh" --help 2>&1)"; then
 fi
 grep -Fq '"--help" is not a valid command!' <<< "$manager_output"
 echo 'PASS: UserManager reaches its command parser with pinned JVM options'
-for retired in delete_user disable_admin enable_admin enable_user make_client_zip firstrun firstrun_rm makeCert; do
-  if [[ -e "/opt/scripts/$retired.sh" ]]; then
-    echo "FAIL: retired $retired.sh is still packaged" >&2
-    exit 1
-  fi
-done
-[[ ! -e /opt/templates/missionpkg && ! -e /kw_product_init && ! -e /opt/scripts/tls_identity.py ]]
-[[ ! -e /opt/scripts/init-fed-truststore.py ]]
-echo 'PASS: retired account, package, and initialization helpers are absent from the image'

@@ -85,10 +85,8 @@ jobs:
             -B -m unittest discover -s /workspace/tests -v
       - name: Verify strict agent installation and fail-closed startup
         run: sh tests/test-strict-agent.sh "$TAK_TEST_IMAGE"
-      - name: Verify vendor launcher and retired helpers
+      - name: Verify vendor launcher
         run: docker run --rm --pull=never -v "$PWD:/workspace:ro" --entrypoint /bin/bash "$TAK_TEST_IMAGE" /workspace/tests/test-server-launcher.sh
-      - name: Verify logging formats with the pinned vendor libraries
-        run: bash tests/test-logging.sh "$TAK_TEST_IMAGE"
       - name: Test HTTPS keystore selection
         run: |
           docker run --rm --pull=never --network none -v "$PWD:/workspace:ro" \

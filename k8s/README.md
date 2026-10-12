@@ -441,7 +441,7 @@ Replace the server Pod after a logging configuration change.
 
 Early bootstrap messages and direct JVM or vendor console output can remain plain text.
 Existing retained records keep their old format. New records use the selected format.
-The image check exercises all formats, time zones, source locations, exceptions,
+The manual image check exercises all formats, time zones, source locations, exceptions,
 audit context, and retained files with the pinned logging libraries:
 
 ```sh
