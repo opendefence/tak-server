@@ -4,7 +4,7 @@ on:
 
 # Remember to change TAK_RELEASE also in push_to_main.yml
 env:
-  TAK_RELEASE: 5.8-RELEASE-84
+  TAK_RELEASE: 5.8-RELEASE-92
 
 jobs:
   checks:
@@ -14,112 +14,158 @@ jobs:
       pull-requests: write
       checks: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
           fetch-depth: 0
-      - name: Prepare env file for hooks
-        run: cp takserver.env.example takserver.env
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.1.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: Check TAK release sync
+        run: uv run --frozen -m unittest tests.test_workflow_release -v
+      - name: Test strict fingerprint policy and hooks
+        run: |
+          docker run --rm --network none --cpus 2 --memory 512m \
+            --tmpfs /work:rw,size=64m \
+            -v "$PWD/extensions/strict-fingerprint:/extension:ro" \
+            eclipse-temurin:17-jdk-noble@sha256:fb79620c3f6ee8f1c7530a8dc4fd49e3b410bcef037694ad4858a1553bac4170 \
+            sh /extension/test.sh
       - name: Run prek
-        uses: j178/prek-action@v2
+        uses: j178/prek-action@1382ad72dea72f9d53832f2bcb65b3e87a947204 # v3.0.1
         env:
           SKIP: no-commit-to-branch
       - name: Validate bumpversion
-        uses: pvarki/config-ci-library/.github/actions/validate-bumpversion@main
+        uses: pvarki/config-ci-library/.github/actions/validate-bumpversion@1786399bf62c2b691f1e8fb9dcfc7a0be72a2846
 
 
-  compose_validations:
+  native_validations:
+    needs: [checks, publish_pr_image]
+    if: >-
+      !cancelled() && needs.checks.result == 'success' &&
+      (needs.publish_pr_image.result == 'success' || needs.publish_pr_image.result == 'skipped')
     runs-on: arc-runner-set
-    env:
-      COMPOSE_PROJECT_NAME: takserver
     permissions:
       contents: read
+      packages: read
       pull-requests: write
       checks: write
     steps:
-      - name: Install git-lfs and jq
-        run: sudo apt-get update && sudo apt-get install -y git-lfs jq
-      - uses: actions/checkout@v4
+      - name: Install git-lfs
+        run: sudo apt-get update && sudo apt-get install -y git-lfs
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
           fetch-depth: 0
           lfs: true
-      - name: Prepare standalone environment
-        run: | # pragma: allowlist secret
-          cp takserver.env.example takserver.env
-          sed -i.bup s/^TAK_SERVER_ADDRESS=/TAK_SERVER_ADDRESS=localhost/ takserver.env
-          sed -i.bup s/^POSTGRES_PASSWORD=/POSTGRES_PASSWORD=cipgpass/ takserver.env
-          sed -i.bup s/^ADMIN_CERT_PASS=/ADMIN_CERT_PASS=ciadminpass/ takserver.env
-          sed -i.bup s/^TAKSERVER_CERT_PASS=/TAKSERVER_CERT_PASS=citakpass/ takserver.env
-          sed -i.bup s/^COUNTRY=/COUNTRY=FI/ takserver.env
-          sed -i.bup s/^CA_NAME=/CA_NAME=CICA/ takserver.env
-          sed -i.bup s/^CA_PASS=/CA_PASS=cicapw/ takserver.env
-          sed -i.bup s/^ORGANIZATION=/ORGANIZATION=Takists/ takserver.env
-          sed -i.bup s/^ORGANIZATIONAL_UNIT=/ORGANIZATIONAL_UNIT=CI/ takserver.env
-          sed -i.bup s/^STATE=/STATE=CI/ takserver.env
-          sed -i.bup s/^CITY=/CITY=CIty/ takserver.env
-      - name: Build standalone image
+      - uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+      - name: Log in to GHCR
+        if: needs.publish_pr_image.result == 'success'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull published candidate
+        if: needs.publish_pr_image.result == 'success'
+        env:
+          TAK_PUBLISHED_IMAGE: ${{ needs.publish_pr_image.outputs.tak-image }}
         run: |
-          docker compose --progress plain build takserver_initialization
-          tak_image=$(docker compose config --format json | jq -er '.services.takserver_initialization.image')
-          tak_image_id=$(docker image inspect --format '{{.Id}}' "$tak_image")
+          docker pull "$TAK_PUBLISHED_IMAGE"
+          docker image tag "$TAK_PUBLISHED_IMAGE" localhost/tak-server:local
+      - name: Build candidate image
+        if: needs.publish_pr_image.result == 'skipped'
+        run: docker buildx build --load --build-arg TAK_RELEASE="$TAK_RELEASE" -t localhost/tak-server:local .
+      - name: Record candidate image
+        run: |
+          tak_image_id=$(docker image inspect --format '{{.Id}}' localhost/tak-server:local)
           echo "TAK_TEST_IMAGE=$tak_image_id" >> "$GITHUB_ENV"
-      - name: Test configuration and standalone initialization
+      - name: Test configuration and launchers
         run: |
           docker run --rm --pull=never --network none -v "$PWD:/workspace:ro" \
             --entrypoint /usr/bin/python3 "$TAK_TEST_IMAGE" \
             -B -m unittest discover -s /workspace/tests -v
-      - name: Test federation truststore initialization
-        run: |
-          docker run --rm --pull=never --network none -v "$PWD:/workspace:ro" \
-            --entrypoint /bin/bash "$TAK_TEST_IMAGE" /workspace/tests/test-fed-truststore.sh
+      - name: Verify strict agent installation and fail-closed startup
+        run: sh tests/test-strict-agent.sh "$TAK_TEST_IMAGE"
+      - name: Verify vendor launcher
+        run: docker run --rm --pull=never -v "$PWD:/workspace:ro" --entrypoint /bin/bash "$TAK_TEST_IMAGE" /workspace/tests/test-server-launcher.sh
       - name: Test HTTPS keystore selection
         run: |
           docker run --rm --pull=never --network none -v "$PWD:/workspace:ro" \
             --entrypoint /bin/bash "$TAK_TEST_IMAGE" /workspace/tests/test-api-keystore.sh
-      - name: Test RASENMAEHER initialization defaults
+      - name: Validate native standalone deployment
         run: |
-          docker run --rm --pull=never --network none -v "$PWD:/workspace:ro" \
-            --entrypoint /usr/bin/python3 "$TAK_TEST_IMAGE" /workspace/tests/check_rm_defaults.py
-      - name: Validate coreconfig
+          mise exec -- task --yes up
+          test "$(docker image inspect --format '{{.Id}}' localhost/tak-server:local)" = "$TAK_TEST_IMAGE"
+      - name: Build standalone Zarf packages
+        if: needs.publish_pr_image.result == 'success'
+        env:
+          TAK_IMAGE: ${{ needs.publish_pr_image.outputs.tak-image }}
         run: |
-          docker compose up takserver_config -d --wait --wait-timeout 180
-          docker compose exec -T takserver_config test -s /opt/tak/data/.coreconfig-ready
-          docker compose exec -T takserver_config keytool -list -keystore /opt/tak/data/certs/files/takserver.jks -storepass:env TAKSERVER_CERT_PASS >/dev/null
-          docker compose exec -T takserver_config keytool -list -keystore /opt/tak/data/certs/files/takserver-https.jks -storepass:env TAKSERVER_CERT_PASS >/dev/null
-      - name: Show composition logs on failure
+          set -euo pipefail
+          mkdir -p outputs/zarf/standalone
+          for arch in amd64 arm64; do
+            zarf package create . --architecture "$arch" --flavor standalone \
+              --set "TAK_IMAGE=$TAK_IMAGE" --confirm --output outputs/zarf/standalone
+          done
+      - name: Upload standalone Zarf packages
+        if: needs.publish_pr_image.result == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tak-server-standalone
+          path: outputs/zarf/standalone/zarf-package-*.tar.zst
+          if-no-files-found: error
+          compression-level: 0
+      - name: Show native workload status on failure
         if: failure()
-        run: docker compose logs --no-color
-      - name: Clean up composition
+        run: |
+          export KUBECONFIG="$PWD/outputs/local/kubeconfig"
+          mise exec -- task --yes status
+          kubectl --context kind-tak-server-local -n tak-server describe job/tak-schema-5-8-92 || true
+          for pod in $(kubectl --context kind-tak-server-local -n tak-server get pods -l batch.kubernetes.io/job-name=tak-schema-5-8-92 -o name); do
+            kubectl --context kind-tak-server-local -n tak-server describe "$pod" || true
+            kubectl --context kind-tak-server-local -n tak-server logs "$pod" -c schema || true
+          done
+      - name: Clean up disposable cluster
         if: always()
-        run: docker compose down -v
+        run: mise exec -- task --yes down
 
-  build_and_publish:
+  publish_pr_image:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    needs: [checks]
     runs-on: arc-runner-set
-    needs: [checks, compose_validations]
+    env:
+      PR_IMAGE_TAG: pr-${{ github.event.number }}-${{ github.run_id }}-${{ github.run_attempt }}
+    outputs:
+      tak-image: ${{ steps.image.outputs.ref }}
     permissions:
       contents: read
       packages: write
     steps:
       - name: Install git-lfs
         run: sudo apt-get update && sudo apt-get install -y git-lfs
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
           lfs: true
-      - name: Publish image
-        uses: pvarki/config-ci-library/.github/actions/publish-image@main
+      - name: Publish PR image
+        id: publish
+        uses: pvarki/config-ci-library/.github/actions/publish-image@1786399bf62c2b691f1e8fb9dcfc7a0be72a2846
         with:
           product: tak
           component: server
           target: run
+          platforms: linux/amd64,linux/arm64
+          extra-tag: ${{ env.PR_IMAGE_TAG }}
           build-args: |
             TAK_RELEASE=${{ env.TAK_RELEASE }}
-          dockerhub-username: ${{ vars.DOCKERHUB_USERNAME }}
-          dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          acr-repo: ${{ vars.ACR_REPO }}
-          acr-username: ${{ vars.ACR_USERNAME }}
-          acr-token: ${{ secrets.ACR_TOKEN }}
+      - name: Resolve published image
+        id: image
+        env:
+          IMAGE: ghcr.io/${{ steps.publish.outputs.image-name }}
+        run: |
+          digest=$(docker buildx imagetools inspect "$IMAGE:$PR_IMAGE_TAG" --format '{{.Manifest.Digest}}')
+          [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          echo "ref=$IMAGE@$digest" >> "$GITHUB_OUTPUT"

@@ -1,0 +1,58 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: tak-server
+resources:
+  - ../../overlays/standalone
+configMapGenerator:
+  - name: tak-settings
+    behavior: merge
+    literals:
+      - TAK_SERVER_ADDRESS=###ZARF_VAR_TAK_SERVER_ADDRESS###
+      - LDAP_UPDATE_INTERVAL=###ZARF_VAR_LDAP_UPDATE_INTERVAL###
+      - TAK_IGNITE_POOL_SIZE=###ZARF_VAR_TAK_IGNITE_POOL_SIZE###
+      - TAK_IGNITE_CACHE_INITIAL_BYTES=###ZARF_VAR_TAK_IGNITE_CACHE_INITIAL_BYTES###
+      - TAK_IGNITE_CACHE_MAX_BYTES=###ZARF_VAR_TAK_IGNITE_CACHE_MAX_BYTES###
+      - CONFIG_MAX_HEAP=###ZARF_VAR_CONFIG_MAX_HEAP###
+      - MESSAGING_MAX_HEAP=###ZARF_VAR_MESSAGING_MAX_HEAP###
+      - API_MAX_HEAP=###ZARF_VAR_API_MAX_HEAP###
+      - JAVA_TOOL_OPTIONS=###ZARF_VAR_JAVA_TOOL_OPTIONS###
+patches:
+  - target: {kind: Service, name: tak-server}
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: "###ZARF_VAR_TAK_SERVICE_TYPE###"
+  - target: {kind: PersistentVolumeClaim, name: tak-data}
+    patch: |-
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: tak-data
+        annotations:
+          helm.sh/resource-policy: keep
+  - target: {kind: Namespace, name: tak-server}
+    patch: |-
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: tak-server
+      $patch: delete
+  - target: {kind: StatefulSet, name: tak-server}
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/initContainers/0/image
+        value: "###ZARF_CONST_TAK_IMAGE###"
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: "###ZARF_CONST_TAK_IMAGE###"
+      - op: replace
+        path: /spec/template/spec/containers/1/image
+        value: "###ZARF_CONST_TAK_IMAGE###"
+      - op: replace
+        path: /spec/template/spec/containers/2/image
+        value: "###ZARF_CONST_TAK_IMAGE###"
+  - target: {kind: Job, name: tak-admin-bootstrap}
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: "###ZARF_CONST_TAK_IMAGE###"

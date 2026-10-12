@@ -1,0 +1,489 @@
+# Native Kubernetes candidate
+
+This base runs TAK 5.8.92 as config, messaging, and API containers in one singleton StatefulSet.
+The image includes the external plugin launcher. The base does not enable plugin manager or retention.
+Standalone uses legacy TAK certificate authentication and does not require
+OpenDefence Core User semantics or fingerprint approval projection.
+Strict authentication is reserved for integrated deployments and remains under implementation.
+Selecting `TAK_AUTH_MODE=strict` installs the pinned admission agent in messaging and API.
+Its approval state starts empty, so client access and the current probe readiness fail
+until a trusted projection is implemented. Do not use this candidate as a strict-authentication release.
+
+## Local standalone test cluster
+
+With Docker or Podman running and [mise](https://mise.jdx.dev/) installed, bring up an isolated Kind cluster using the pinned [OpenDefence base cluster task](https://github.com/opendefence/base/blob/b04ff076bc4d3ec6a2ce01074a66f10d0f09b7a6/taskfiles/cluster.yaml):
+
+```sh
+mise install
+mise exec -- task --yes up
+mise exec -- task --yes status
+mise exec -- task --yes smoke
+```
+
+`up` creates `tak-server-local` and writes its kubeconfig to `outputs/local/kubeconfig`.
+It installs the OpenDefence base package and a local CA, generates retained runtime/JKS password Secrets with External Secrets Operator, starts CNPG/PostGIS, issues JKS identities with cert-manager, builds and loads the current image, then deploys the standalone Zarf components. The final smoke check requires a ready StatefulSet and HTTP 200 from an authenticated `/Marti` read.
+CI sets `TAK_TEST_IMAGE` to an existing Docker image ID. When set, `task image`
+retags and loads that exact image into Kind without rebuilding; a missing image
+fails the task. Ordinary local runs build the checkout with Docker or Podman.
+With Docker's containerd image store, the task saves only the image's platform
+and loads that archive into Kind. This avoids missing digests for other platforms.
+That path requires Docker API 1.48 or newer for `docker image save --platform`.
+Podman and Docker's classic image store keep the normal `kind load docker-image` path.
+The local `task tak` restarts the whole server Pod after Zarf applies so repeated runs pick up changed ConfigMaps and a rebuilt image with the same local tag.
+The local Zarf deployment uses a ClusterIP Service because Kind has no load balancer; the normal standalone package defaults to LoadBalancer. Use `kubectl --kubeconfig outputs/local/kubeconfig -n tak-server port-forward svc/tak-server 8443:8443` for local access. The test CA and admin probe identity are for this disposable cluster only.
+`mise exec -- task --yes down` deletes that cluster, including its database and identities. It does not target other Kind clusters.
+
+Use the [federation acceptance test](../tests/federation/README.md) to test two independent TAK instances.
+It checks REST setup, cross-server CoT, retained trust, and restart recovery.
+
+## Required inputs
+
+Supply a same-namespace CloudNativePG Cluster named `tak-database`, bootstrapped
+with the TAK database and owner. Its generated `tak-database-app` Secret supplies
+the host, database name, and migration account to the schema Job; the server uses
+its host and database name.
+Install PostGIS and pgcrypto in that database.
+Apply the separate schema and grants Jobs before the server base.
+Give the CNPG application owner rights to create and alter TAK tables.
+Keep the runtime account separate and manage it through CNPG role management.
+CNPG generates the [application Secret](https://cloudnative-pg.io/docs/1.30/applications/),
+but a separate runtime role needs a `kubernetes.io/basic-auth` password Secret
+from the installation's Secret generator; [CNPG consumes that Secret and
+reconciles the role](https://cloudnative-pg.io/docs/1.30/declarative_role_management/).
+The grants Job gives the runtime account data access after the schema Job completes.
+
+| Secret | Required keys | Purpose |
+| --- | --- | --- |
+| `tak-database-app` | `host`, `dbname`, `username`, `password` | CNPG-generated schema connection and server endpoint. |
+| `tak-database-runtime` | `username`, `password` | Generated basic-auth Secret consumed by the CNPG-managed runtime role. |
+| `tak-store-passwords` | `cot-password`, `https-password`, `trust-password` | Installation-generated passwords matching the supplied stores. |
+| `tak-cot-identity` | `keystore.jks` | RSA CoT/JWT and federation private-key entry. Require both server and client authentication usages. |
+| `tak-https-identity` | `keystore.jks`, `ca.crt` | Separate HTTPS identity and public outbound CA bundle. |
+| `tak-client-trust` | `truststore.jks` | CoT client trust. |
+| `tak-federation-bootstrap` | `truststore.jks` | Initial federation trust, used only when persistent trust is absent. |
+| `tak-probe-identity` | `tls.crt`, `tls.key`, `ca.crt` | Client certificate, unencrypted client key, and HTTPS server CA bundle for authenticated probes. |
+
+Use issuer-managed or supplied native JKS stores. The tested cert-manager private-key alias is `certificate`.
+The CoT identity also authenticates federation connections in both directions.
+Its JKS key entry must include the leaf and an issuer certificate in its chain.
+TAK 5.8.92 cannot federate with a leaf-only chain.
+The local manifests use an intermediate CA for this identity because cert-manager omits root certificates from identity chains.
+The intermediate CA key stays in its own Secret and is not mounted by TAK Pods.
+Match `TAK_SERVER_ADDRESS` to the served HTTPS certificate's DNS name.
+The probe certificate must be trusted for client authentication. The bootstrap Job registers it as an administrator through UserManager.
+This is the standalone legacy bootstrap path; it does not populate strict approvals.
+The probe identity has administrator access; restrict Secret access to the installation owner.
+The Job mounts only its public certificate. Application containers mount its client key for the authenticated read.
+Ordinary Pods do not mount issuer CA signing keys.
+
+The client and federation truststores use `trust-password`. Preserve that password while retaining an existing federation store.
+On first start, the volume init container validates `tak-federation-bootstrap/truststore.jks`.
+It seeds `/opt/tak/data/certs/files/fed-truststore.jks` only when that file is absent.
+The server roles link `/opt/tak/certs` to `/opt/tak/data/certs` on the `tak-data` PVC.
+Administrators can configure federation through the web UI at `https://TAK_SERVER_ADDRESS:8443/Marti`.
+Federation trust changes use this writable, persistent store.
+Later Pod starts validate the saved store and preserve its contents.
+An unrelated client trust root must not replace administrator-managed federation trust.
+Keep CoT and HTTPS identities separate. Do not widen client trust with public Java roots.
+
+## Standalone administrators and user enrollment
+
+Standalone uses certificates from the installation's PKI and TAK's legacy user records.
+The Kubernetes installation administrator performs the steps below.
+A TAK web administrator who has no PKI or Kubernetes access must request certificates from that administrator.
+Use a separate certificate and private key for each person.
+The `tak-admin-bootstrap` Job registers `tak-probe-identity` for health checks.
+Keep that identity for the probes. Issue a personal certificate for browser administration.
+
+### Issue the first personal administrator certificate
+
+The following example uses the disposable local cluster's cert-manager issuer.
+For another installation, select its kubeconfig and an issuer already trusted by `tak-client-trust`.
+An external PKI can supply the same client certificate, private key, and issuer chain instead.
+Require the `clientAuth` extended key usage and a unique certificate common name.
+Keep CA signing keys outside TAK Pods.
+
+```sh
+export KUBECONFIG="$PWD/outputs/local/kubeconfig"
+TAK_NAMESPACE=tak-server
+TAK_CERT_NAME=tak-admin
+kubectl -n "$TAK_NAMESPACE" wait --for=condition=complete job/tak-admin-bootstrap --timeout=180s
+kubectl -n "$TAK_NAMESPACE" apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ${TAK_CERT_NAME}
+spec:
+  secretName: ${TAK_CERT_NAME}
+  commonName: ${TAK_CERT_NAME}
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  usages: [digital signature, client auth]
+  issuerRef:
+    kind: ClusterIssuer
+    name: public-issuer
+EOF
+kubectl -n "$TAK_NAMESPACE" wait --for=condition=Ready "certificate/$TAK_CERT_NAME" --timeout=180s
+```
+
+Export the personal identity into the ignored `outputs` directory.
+The PKCS#12 command prompts for an export password.
+Use a separate file for HTTPS server trust; its issuer can differ from the client issuer.
+
+```sh
+umask 077
+TAK_CERT_DIR="$PWD/outputs/standalone/$TAK_CERT_NAME"
+mkdir -p "$TAK_CERT_DIR"
+kubectl -n "$TAK_NAMESPACE" get secret "$TAK_CERT_NAME" -o go-template='{{index .data "tls.crt" | base64decode}}' > "$TAK_CERT_DIR/client.crt"
+kubectl -n "$TAK_NAMESPACE" get secret "$TAK_CERT_NAME" -o go-template='{{index .data "tls.key" | base64decode}}' > "$TAK_CERT_DIR/client.key"
+kubectl -n "$TAK_NAMESPACE" get secret "$TAK_CERT_NAME" -o go-template='{{index .data "ca.crt" | base64decode}}' > "$TAK_CERT_DIR/client-ca.crt"
+kubectl -n "$TAK_NAMESPACE" get secret tak-https-identity -o go-template='{{index .data "ca.crt" | base64decode}}' > "$TAK_CERT_DIR/server-ca.crt"
+openssl pkcs12 -export -name "$TAK_CERT_NAME" \
+  -inkey "$TAK_CERT_DIR/client.key" -in "$TAK_CERT_DIR/client.crt" \
+  -certfile "$TAK_CERT_DIR/client-ca.crt" -out "$TAK_CERT_DIR/client.p12"
+```
+
+For an external PKI, put its returned files at the same paths.
+Obtain the HTTPS server CA bundle from the server's PKI if `ca.crt` is absent from its Secret.
+Register the public client certificate as an administrator through the maintained UserManager launcher.
+This command sends only the public certificate to the messaging container.
+
+```sh
+kubectl -n "$TAK_NAMESPACE" exec -i tak-server-0 -c messaging -- sh -ceu '
+  certificate=$(mktemp /tmp/tak-admin.XXXXXX)
+  trap '\''rm -f "$certificate"'\'' EXIT
+  cat > "$certificate"
+  TAK_MESSAGING_HOST=tak-ignite /opt/scripts/user-manager.sh certmod -A "$certificate"
+' < "$TAK_CERT_DIR/client.crt"
+```
+
+Import `client.p12` into the browser's personal certificate store.
+Trust `server-ca.crt` for the server connection if the browser does not already trust its issuer.
+Open `https://TAK_SERVER_ADDRESS:8443/Marti` and select the personal administrator certificate.
+Use the DNS name in the server certificate.
+For the local cluster, run this command in another terminal with the same kubeconfig:
+
+```sh
+kubectl -n tak-server port-forward svc/tak-server 8443:8443
+```
+
+Open `https://tak.localtest.me:8443/Marti`.
+Verify administrator access with the new identity:
+
+```sh
+curl --fail --silent --show-error \
+  --resolve tak.localtest.me:8443:127.0.0.1 \
+  --cacert "$TAK_CERT_DIR/server-ca.crt" \
+  --cert "$TAK_CERT_DIR/client.crt" --key "$TAK_CERT_DIR/client.key" \
+  https://tak.localtest.me:8443/Marti/api/user-management/api/list-users
+```
+
+For a remote installation, use its hostname and omit the local `--resolve` argument.
+Deliver a personal PKCS#12 file through an approved private channel.
+Keep its password separate from the file.
+
+### Enroll more users
+
+Repeat issuance and export with a new `TAK_CERT_NAME` for each user, such as `alice`.
+Do not run the administrator registration command for ordinary users.
+Register their public certificate with the required TAK group instead:
+
+```sh
+kubectl -n "$TAK_NAMESPACE" exec -i tak-server-0 -c messaging -- sh -ceu '
+  certificate=$(mktemp /tmp/tak-user.XXXXXX)
+  trap '\''rm -f "$certificate"'\'' EXIT
+  cat > "$certificate"
+  TAK_MESSAGING_HOST=tak-ignite /opt/scripts/user-manager.sh certmod -g team-alpha "$certificate"
+' < "$TAK_CERT_DIR/client.crt"
+```
+
+Replace `team-alpha` with the intended group.
+The pinned UserManager defines `-g` as permission to send and receive that group's messages.
+For an existing account, `-g` replaces its groups. Use `-a -g` to append a group.
+Do not reuse another person's common name or certificate.
+Check the account and groups in the administrator web UI before distributing credentials.
+Import the user's `client.p12` into their TAK client.
+Configure TLS to the server's DNS name on TCP 8089.
+Supply the CA bundle that validates the server's CoT certificate; it can differ from the HTTPS CA.
+Use the client's trust-store format, such as a CA-only PKCS#12 file where required.
+Verify traffic with another client in the same group.
+Verify that the new user cannot open administrator functions.
+
+This is manual certificate enrollment.
+The current manifests do not configure a certificate-signing service or expose enrollment port 8446.
+Creating a username and password in the web UI does not supply a client certificate in this deployment.
+Password-based automatic enrollment needs a separate issuer, endpoint, and acceptance test.
+The full browser and client procedure remains an open [acceptance check](../docs/implementation-plan.md#6-complete-standalone-operation-ci-and-cleanup).
+The command flags above were checked against the pinned `5.8-RELEASE-92` UserManager.
+
+## Zarf packages
+
+The repository root [`zarf.yaml`](../zarf.yaml) packages both native overlays and
+the schema/grants Jobs as `standalone` and `integrated` flavors. Use Zarf's lowercase filename.
+Build with a published, pinned TAK image digest; each package includes that image
+for offline deployment.
+
+The main workflow publishes the Dockerfile's `run` image to
+`ghcr.io/opendefence/tak-server` for `linux/amd64` and `linux/arm64` after checks pass.
+It tests the published digest, lints both Zarf flavors, then builds and signs
+packages for AMD64 and ARM64 using GitHub OIDC, following the `base` publishing
+workflow. Packages are published to `ghcr.io/opendefence/zarf/tak-server` with
+`VERSION-standalone`, `VERSION-integrated`, `latest-standalone`, and
+`latest-integrated` tags. `VERSION` is the repository version with `+` replaced by
+`-`; each flavor tag contains both architectures. The workflow summary lists
+the image digest and package references. Use references from successful runs.
+The packages retain the `5.8.92-candidate` metadata version.
+
+Same-repository PR runs also build standalone packages after native validation
+passes. Download `tak-server-standalone` from the workflow run's **Artifacts**
+section; it contains AMD64 and ARM64 `.tar.zst` packages with the tested image
+digest bundled. Main runs provide the same artifact using their signed packages;
+PR packages are unsigned candidates. Fork, Dependabot, and manual validation runs
+do not produce these artifacts. Artifacts expire according to repository retention.
+After extracting the artifact ZIP and preparing the prerequisites below, deploy
+the archive matching your cluster's architecture:
+
+```sh
+zarf package deploy zarf-package-tak-server-amd64-5.8.92-candidate-standalone.tar.zst
+```
+
+After preparing the deployment prerequisites below, deploy a published package:
+
+```sh
+zarf package deploy oci://ghcr.io/opendefence/zarf/tak-server:latest-standalone --architecture amd64
+```
+
+Use `latest-integrated` for the integrated flavor and `--architecture arm64` for
+ARM64. To select a release, use the versioned flavor tag from the
+workflow summary. To build a package locally, use the image digest from a
+successful run of the same commit as the package sources:
+
+```sh
+zarf dev lint . --flavor standalone --set TAK_IMAGE=ghcr.io/opendefence/tak-server@sha256:<published-digest>
+zarf package create . --flavor standalone --set TAK_IMAGE=ghcr.io/opendefence/tak-server@sha256:<published-digest>
+zarf package deploy zarf-package-tak-server-*.tar.zst
+```
+
+For the integrated flavor, use `--flavor integrated` at creation. Apply the sibling
+`integration-tak` deployment first; it owns that namespace. The integrated Zarf
+package installs TAK resources there and does not install the `tak-operator`.
+For standalone Zarf deployment, create namespace `tak-server` and install its
+CNPG Cluster and identity/credential Secrets before deploying the package.
+
+Zarf prompts for `TAK_SERVER_ADDRESS`. PostgreSQL host, database, and migration
+credentials come from the CNPG-generated `tak-database-app` Secret. The separate
+runtime role must be managed by CNPG, using the installation-generated
+`tak-database-runtime` password Secret. Zarf does not prompt for or copy
+database credentials. The identity provisioning workflow must generate
+`tak-store-passwords` alongside the JKS identities so the passwords match;
+Zarf does not prompt for or regenerate them.
+Pool/cache sizes, JVM heap limits, and `JAVA_TOOL_OPTIONS` are also Zarf parameters
+with the tested base defaults. Internal mount paths, the Ignite discovery Service,
+and legacy authentication mode are fixed by this candidate. Compose-only CA
+generation, admin certificate, and mission-package environment variables are not
+used by the native deployment.
+`LDAP_UPDATE_INTERVAL` is a Zarf parameter in seconds when LDAP is configured.
+The pinned 5.8.92 bytecode converts the value to milliseconds for CoT X.509
+re-authentication and schedules LDAP authentication with `TimeUnit.SECONDS`.
+The default is `60`; recheck both paths when the vendor binary changes.
+The template also sets `MissionStrictUidMissionMembership=false` for new installs.
+Existing administrator XML with an explicit value keeps that choice; a missing
+value is filled with `false` during the next configuration merge.
+`TAK_SERVICE_TYPE` defaults to `LoadBalancer`; the local Kind task sets `ClusterIP`.
+
+Before deployment, supply the five identity/trust Secrets listed above and the
+matching store-password Secret in the target namespace (`tak-server` or
+`integration-tak`). The same namespace must contain the CNPG Cluster, its
+generated application Secret, and the separate runtime role/Secret. Generate
+each Secret once and preserve it across Zarf redeployments; changing a store
+password without reissuing its JKS prevents startup. Check the schema Job result
+and its migration history before treating the server as ready.
+Zarf waits for the schema and grants Jobs, then deploys the server. It does not generate a
+CA, sign certificates, provision CNPG, or alter existing PVCs. The package marks
+its PVC for retention when Zarf removes the generated Helm releases. A database
+switch or TAK release
+upgrade needs a reviewed new schema Job name; a completed Job is not rerun.
+After changing ConfigMap or password inputs on an installed system, coordinate
+a whole-Pod replacement so every TAK role reads the same generation.
+
+Update `zarf.yaml` and `k8s/zarf/` whenever a native overlay adds or changes a
+configurable input, Secret key, image, workload, or namespace. Render and inspect
+the resulting package before release; Zarf's Kustomize build happens at package
+creation, while values are substituted at deployment.
+
+## Install
+
+Build the image with the repository Dockerfile. Override `JAVA_RUNTIME_IMAGE` and `JAVA_BUILD_IMAGE` with pinned images.
+Pin the candidate image from `ghcr.io/opendefence/tak-server` by digest in an overlay before applying it.
+The Kind overlay selects the local `localhost/tak-server:release-92` test image and disables pulls.
+Load that image into the intended Kind cluster before applying the overlay.
+
+Create a local overlay that consumes `k8s/base`, `k8s/overlays/standalone`, or `k8s/overlays/integrated`.
+Set its namespace, image digest, storage size/class, and advertised DNS name.
+Merge `tak-settings` with `configMapGenerator` and `behavior: merge`.
+Keep passwords and rendered XML out of ConfigMaps.
+
+The integrated overlay targets the `integration-tak` namespace created by the sibling
+`integration-tak/k8s/integration` deployment. It does not create or own that namespace.
+Its TAK resources, CNPG Cluster/database/identity Secrets, schema Job, and PVC must all be placed
+there by the installer. The overlay allows the `tak-operator` Pod (labelled
+`app: integration-tak-operator`) to reach Ignite; it does not deploy the
+`tak-operator` or grant it TAK Secret access.
+The sibling API and `tak-operator` manifests are managed in their own repository.
+For strict-mode REST access, the `tak-operator` creates `tak-integration-admin` with its public `tls.crt`, uses a certificate chaining to TAK's client truststore, and registers that certificate as a TAK administrator through JNI. The integrated overlay projects this optional Secret into the API container only. Until it is present, strict HTTP admission denies the integration certificate. Replacing the Secret changes the exact pinned leaf without a server restart; the new leaf must also be registered through JNI. This path does not bypass TAK's REST authorization.
+This is the TAK integration's installed identity, not a separate approval. General installed-integration identities for 8443 or 8089 require the Core IntegrationManifest identity and certificate-status contract; they are not yet accepted by this overlay.
+The integrated overlay is still a legacy-authentication candidate until strict
+admission and the management contract pass their acceptance checks.
+
+Create separate local overlays for `k8s/schema` and `k8s/grants`.
+Set the same namespace and image as the server overlay (`integration-tak` for the integrated deployment).
+Apply and wait for both versioned Jobs before starting the server:
+
+```sh
+TAK_NAMESPACE=tak-server # use integration-tak for the integrated overlay
+kubectl apply -k path/to/schema-overlay
+kubectl -n "$TAK_NAMESPACE" wait --for=condition=complete job/tak-schema-5-8-92 --timeout=900s
+kubectl apply -k path/to/grants-overlay
+kubectl -n "$TAK_NAMESPACE" wait --for=condition=complete job/tak-grants-5-8-92 --timeout=180s
+```
+
+The Job uses Flyway and the migrations bundled in the pinned `SchemaManager.jar`.
+The small `SchemaUpgrade` launcher never calls the vendor `repair` path.
+It rejects a changed migration checksum and leaves the history row unchanged.
+Flyway uses a PostgreSQL advisory lock during migration.
+The versioned Job stays complete after success; a new release needs a new Job name.
+On an empty database, the Job installs the schema without `takdb_base.sql`.
+The legacy dump remains as an upgrade fixture; it is not used for fresh installs.
+Back up the database before any upgrade.
+Inspect the Job logs and schema history before starting the server.
+An existing database without Flyway history needs a separate reviewed migration.
+The repository's legacy SQL dump has V7 and V9 checksum mismatches with this release.
+The Job rejects it until an administrator reviews and reconciles those exact history rows.
+The disposable dump upgrade passed after that step. A new Job also resumed after the first Job stopped at a blocked V98 migration.
+A production data upgrade and other interruption modes still need tests.
+
+The grants Job connects as the CNPG application owner. It grants existing-table
+and sequence access to the runtime role, sets default privileges for later
+migrations, and removes runtime write access to `schema_version`. It uses the
+runtime username from its Secret and quotes it as a PostgreSQL identifier.
+The runtime role must not own the schema, have `CREATE` on it, or inherit
+`schema_version` write access through another role.
+The disposable test runtime role could read a TAK table and could not create a table.
+
+The standalone overlay creates namespace `tak-server` and a TCP LoadBalancer Service.
+It requires the CNPG Cluster and Secrets above. It has no Core, RMAPI, `tak-operator`, or sibling-checkout dependency.
+The Kind overlay uses ClusterIP services; use port forwarding for local traffic tests.
+
+```sh
+kubectl apply -k path/to/local-overlay
+kubectl -n "$TAK_NAMESPACE" wait --for=condition=complete job/tak-admin-bootstrap --timeout=180s
+kubectl -n "$TAK_NAMESPACE" rollout status statefulset/tak-server --timeout=300s
+```
+
+The headless discovery Service publishes the server Pod before application readiness.
+The bootstrap Job can therefore reach messaging while probes still await administrator registration.
+Services select only server Pods; they exclude bootstrap Pods.
+The bootstrap Job has a 180-second deadline and two retries. Probe operations have a four-second process timeout.
+Readiness checks the local JVM, live config ownership, and an authenticated API request that reads the messaging user-management service.
+The API launcher waits for the messaging CoT listener before JVM startup; it exits after 180 seconds if messaging has not opened it, allowing Kubernetes to retry.
+It does not establish direct configuration RPC health or plugin callback health.
+Readiness checks every 15 seconds and fails on the first failed operation.
+Startup allows 60 attempts at five-second intervals. Liveness restarts each affected role after six failed checks at 15-second intervals.
+These probes share the authenticated RPC check. A messaging stall can restart config and API as well as messaging.
+Recovery can therefore involve several roles. Kubernetes reports probe failures and container restart counts.
+Do not treat these thresholds as a service restoration guarantee; scheduling, termination, and startup add time.
+Use `scripts/restart-kubernetes.sh namespace` for coordinated Pod replacement. It reports failure after a 300-second rollout wait.
+
+The base permits CoT, HTTPS, and federation ingress. It restricts Ignite ingress to same-namespace TAK-labelled Pods.
+The integrated overlay also permits the `tak-operator` Pod to reach Ignite. The base does not restrict egress.
+Kind policy objects are not evidence of enforcement by a production CNI.
+Expose extra administrator-created listeners through additional Service and NetworkPolicy entries.
+Keep `/Marti` TLS client authentication intact when adding external routing.
+
+## Logs
+
+Set the Docker environment variable `TAK_LOG_FORMAT` to select the application log format.
+The image defaults to `utc`. The same format applies to stdout and retained files.
+This applies to config, messaging, API, retention, and plugin manager roles.
+
+| Value | Format |
+| --- | --- |
+| `utc` | Text with ISO timestamps in UTC, ending in `Z`. This is the default. |
+| `local` | Text with ISO timestamps in the JVM time zone, including its UTC offset. |
+| `ecs` | Elastic Common Schema JSON with UTC timestamps. |
+
+For example, use `docker run -e TAK_LOG_FORMAT=ecs ...` to select ECS.
+For local time, set `TZ`, for example `-e TAK_LOG_FORMAT=local -e TZ=Europe/Helsinki`.
+The JVM option `-Duser.timezone` takes precedence over `TZ`.
+An unsupported format stops startup. A custom `LOGGING_CONFIG` takes precedence over this selector.
+
+Text follows the [libpvarki format](https://github.com/pvarki/python-libpvarki/blob/main/src/libpvarki/logging/common.py#L26):
+
+```text
+[2026-10-12T09:00:00.123Z][INFO] tak.server.ServerConfiguration (1) ServerConfiguration.java:main:123 | message
+```
+
+The example source line is illustrative. Text logs include file, method, and line when the bytecode supplies them.
+These locations refer to the shipped vendor build. Keep the TAK release number with bug reports.
+Caller lookup adds work to each text log event. Asynchronous appenders capture it before queuing.
+Audit context follows the message. Exceptions retain their stack traces.
+ECS keeps the bundled Spring fields and exception stack traces; it does not add caller fields.
+The default ECS `service.name` is `tak-server-ROLE`, for example `tak-server-api`.
+Set `LOGGING_STRUCTURED_ECS_SERVICE_NAME` to change it.
+
+Startup creates an external copy of the vendor logging configuration.
+It uses bundled Logback text encoders or the [Spring Boot ECS encoder](https://docs.spring.io/spring-boot/3.5/reference/features/logging.html#features.logging.structured).
+It preserves file paths, rotation, filters, and audit routing.
+It does not change vendor WAR or JAR files.
+Set `LOGGING_CONFIG` to supply a custom logging configuration instead.
+Replace the server Pod after a logging configuration change.
+
+Early bootstrap messages and direct JVM or vendor console output can remain plain text.
+Existing retained records keep their old format. New records use the selected format.
+The manual image check exercises all formats, time zones, source locations, exceptions,
+audit context, and retained files with the pinned logging libraries:
+
+```sh
+bash tests/test-logging.sh IMAGE
+```
+
+## State and replacement
+
+`tak-data` persists the authoritative CoreConfig, messaging file-auth, logs, and existing certificate/federation state.
+Config owns `/opt/tak/data/CoreConfig_config.xml`. Its root XML and `.backup` links resolve to the PVC.
+The external server launcher sets `LocalConfiguration.CONFIG_FILE` to the actual role file before starting the unchanged server.
+This makes Java create `.backup` beside the real file; a backup symlink alone is replaced by the vendor copy routine.
+TAK cluster mode is rejected because it selects another storage path. Kubernetes does not require that mode.
+Followers use private runtime CoreConfigs. API and other followers use private file-auth directories.
+Messaging and config resolve `/opt/tak/auth` to `/opt/tak/data/auth`.
+Messaging owns live persistent file-auth updates. API control updates can save its private copy and backup.
+
+At first adoption, validate and copy legacy `/opt/tak/data/UserAuthenticationFile.xml` into `data/auth`.
+Retain the legacy file and backup with restricted modes. Subsequent startup prefers the new authority.
+The retained legacy file is no longer updated. Do not restore an older image against it without a controlled state conversion.
+Preserve the PVC and identities. Stop the previous server controller before applying the singleton StatefulSet against its claim.
+Match the claim's existing size and storage class in the adoption overlay.
+Keep the lifetime config lock; RWO does not enforce exclusive ownership.
+
+The startup merge follows `coreconfig.MANAGED` and replaces deployment-owned LDAP configuration.
+Administrator-owned peers, groups, policy, and additional listeners remain in persistent XML.
+An admin edit to a deployment-owned attribute is replaced at the next controlled startup merge.
+Java XML publication still has the truncation risk described in reports 004 and 005. Private files and persistent backups do not make it atomic.
+
+Coordinate changes to identity files and matching password Secrets. Replace the whole server Pod after the generation is ready.
+Verify the served certificate and authenticated traffic after replacement. Live reload and certificate renewal acceptance are unfinished.
+An isolated [T2 check](../docs/t2-standalone-renewal.md) renewed HTTPS with an unchanged password and CA through a coordinated Pod replacement.
+It did not test automatic issuer renewal or a password change.
+Back up database, XML, file-auth, trust, content, and identities together before upgrade or restore.
+The base retains the existing data layout; mission/content/audit path inventory remains unfinished.
+
+## Remove workloads
+
+```sh
+scripts/uninstall-kubernetes.sh tak-server
+```
+
+This removes labelled workloads and network/configuration resources. It retains PVCs, Secrets, database, and namespace.
+Do not use `kubectl delete -k` as the default uninstall command: the base includes a PVC.
+Local-path storage does not prove recovery after node or cluster loss.

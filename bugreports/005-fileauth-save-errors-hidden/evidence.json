@@ -1,0 +1,41 @@
+{
+  "environment": "../ENVIRONMENT.md",
+  "evidence_level": "Paraphrased binary inspection; caller success after an I/O failure not tested",
+  "inspected_sequence": [
+    "When a control update and user are present, publish the control update before the persistent save.",
+    "Call JAXBUtils.saveJAXifiedObject for the authentication file.",
+    "Catch Exception from the save; emit a debug message only when debug logging is enabled.",
+    "Do not rethrow the persistence exception."
+  ],
+  "inspection_tool": "CFR 0.152, exact T1 binaries",
+  "live_storage_verification": {
+    "backup_on_same_mount": true,
+    "claim": "tak-data",
+    "claim_phase": "Bound",
+    "context": "kind-tak-server-t0",
+    "device_inode_api_and_messaging": "64772:176722332",
+    "file_mode": "0644",
+    "file_type": "regular file",
+    "mount": "/opt/tak/data",
+    "namespace": "tak-server-t1",
+    "path_from_live_coreconfig": "/opt/tak/data/UserAuthenticationFile.xml",
+    "reclaim_policy": "Delete",
+    "storage_scope": "Node-local hostPath provisioned for the PVC; not a backup or node-loss guarantee"
+  },
+  "method": "com.bbn.marti.groups.FileAuthenticator.saveChanges",
+  "observed_on": "2026-10-10",
+  "original_findings_commit": "8ec0351",
+  "redaction": "Inspection notes are paraphrases. Decompiled source is not included.",
+  "source_artifacts": [
+    "outputs/t1/fileauth-configured-path.txt",
+    "outputs/t1/fileauth-pod-mounts.json",
+    "outputs/t1/fileauth-pvc.json",
+    "outputs/t1/fileauth-pv.json",
+    "outputs/t1/fileauth-live-messaging.txt",
+    "outputs/t1/fileauth-live-api.txt",
+    "outputs/t1/decompiled/com/bbn/marti/groups/FileAuthenticator.java",
+    "outputs/t1/decompiled/tak/server/util/JAXBUtils.java"
+  ],
+  "source_checksums": "../SOURCE-SHA256SUMS",
+  "validation_limit": "T1 used writable storage. Unwritable/full-disk fault injection and real remote caller results remain unverified."
+}

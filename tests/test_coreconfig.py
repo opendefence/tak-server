@@ -32,6 +32,7 @@ class CoreConfigTest(unittest.TestCase):
             TAK_SERVER_ADDRESS="tak.test",
         )
         self.environment.pop("LDAP_BIND_PASSWORD", None)
+        self.environment.pop("LDAP_UPDATE_INTERVAL", None)
         for name in list(self.environment):
             if name.startswith("TAK_HTTPS_"):
                 self.environment.pop(name)
@@ -228,14 +229,21 @@ class CoreConfigTest(unittest.TestCase):
             )
 
     def test_conflicting_admin_port_is_not_overwritten(self) -> None:
-        saved = coreconfig.read_xml(self.template)
-        listener = coreconfig.require(saved, "network/input[@_name='stdssl-noarchive']")
-        listener.set("_name", "admin-listener")
-        self.save(saved)
-        before = self.destination.read_bytes()
-        with self.assertRaisesRegex(ValueError, "Duplicate tcp listener on port 8090"):
-            self.prepare()
-        self.assertEqual(self.destination.read_bytes(), before)
+        for port in ("8090", "08090"):
+            with self.subTest(port=port):
+                saved = coreconfig.read_xml(self.template)
+                listener = coreconfig.require(
+                    saved, "network/input[@_name='stdssl-noarchive']"
+                )
+                listener.set("_name", "admin-listener")
+                listener.set("port", port)
+                self.save(saved)
+                before = self.destination.read_bytes()
+                with self.assertRaisesRegex(
+                    ValueError, "Duplicate tcp listener on port 8090"
+                ):
+                    self.prepare()
+                self.assertEqual(self.destination.read_bytes(), before)
 
     def test_ldap_can_be_enabled_and_disabled(self) -> None:
         self.prepare()
@@ -247,7 +255,17 @@ class CoreConfigTest(unittest.TestCase):
         self.assertEqual(
             coreconfig.require(enabled, "auth/ldap").get("url"), "ldap://directory.test"
         )
-        # Fresh RASENMAEHER startup must also validate the actual LDAP template.
+        self.assertEqual(
+            coreconfig.require(enabled, "auth/ldap").get("updateinterval"), "60"
+        )
+        self.environment["LDAP_UPDATE_INTERVAL"] = "120"
+        self.render_template()
+        self.prepare()
+        configured = coreconfig.read_xml(self.destination)
+        self.assertEqual(
+            coreconfig.require(configured, "auth/ldap").get("updateinterval"), "120"
+        )
+        # Fresh startup must also validate the actual LDAP template.
         self.destination.unlink()
         self.prepare()
         self.environment.pop("LDAP_BIND_PASSWORD")
@@ -256,6 +274,26 @@ class CoreConfigTest(unittest.TestCase):
         disabled = coreconfig.read_xml(self.destination)
         self.assertIsNone(coreconfig.one(disabled, "auth/ldap"))
         self.assertIsNone(coreconfig.require(disabled, "auth").get("default"))
+
+    def test_mission_uid_default_preserves_explicit_admin_choice(self) -> None:
+        self.prepare()
+        network = coreconfig.require(coreconfig.read_xml(self.destination), "network")
+        self.assertEqual(network.get("MissionStrictUidMissionMembership"), "false")
+        saved = coreconfig.read_xml(self.destination)
+        saved_network = coreconfig.require(saved, "network")
+        saved_network.attrib.pop("MissionStrictUidMissionMembership")
+        self.save(saved)
+        self.prepare()
+        network = coreconfig.require(coreconfig.read_xml(self.destination), "network")
+        self.assertEqual(network.get("MissionStrictUidMissionMembership"), "false")
+        saved = coreconfig.read_xml(self.destination)
+        coreconfig.require(saved, "network").set(
+            "MissionStrictUidMissionMembership", "true"
+        )
+        self.save(saved)
+        self.prepare()
+        network = coreconfig.require(coreconfig.read_xml(self.destination), "network")
+        self.assertEqual(network.get("MissionStrictUidMissionMembership"), "true")
 
     def test_additional_cot_listener_does_not_change_https_identity(self) -> None:
         config = coreconfig.read_xml(self.template)

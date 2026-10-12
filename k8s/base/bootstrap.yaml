@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tak-admin-bootstrap
+  labels:
+    app.kubernetes.io/name: tak-server
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 180
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: tak-server
+        app.kubernetes.io/component: bootstrap
+    spec:
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      containers:
+        - name: register
+          image: tak-server:5.8.92
+          args: [/opt/scripts/user-manager.sh, certmod, -A, /probe/tls.crt]
+          env:
+            - {name: TAK_MESSAGING_HOST, value: tak-ignite}
+            - name: TAK_IGNITE_BIND_ADDRESS
+              valueFrom:
+                fieldRef: {fieldPath: status.podIP}
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {memory: 512Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            seccompProfile: {type: RuntimeDefault}
+          volumeMounts:
+            - {name: probe, mountPath: /probe, readOnly: true}
+      volumes:
+        - name: probe
+          secret:
+            secretName: tak-probe-identity # pragma: allowlist secret
+            items: [{key: tls.crt, path: tls.crt}]
+            defaultMode: 384

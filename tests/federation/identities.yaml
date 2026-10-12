@@ -1,0 +1,35 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: federation-selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: federation-ca
+spec:
+  isCA: true
+  commonName: federation-test-ca
+  secretName: federation-ca # pragma: allowlist secret
+  privateKey: {algorithm: RSA, size: 2048}
+  issuerRef: {kind: Issuer, name: federation-selfsigned}
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: federation-ca
+spec:
+  ca: {secretName: federation-ca} # pragma: allowlist secret
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: federation-client
+spec:
+  secretName: federation-client # pragma: allowlist secret
+  commonName: federation-client
+  privateKey: {algorithm: RSA, size: 2048}
+  usages: [digital signature, client auth]
+  issuerRef: {kind: Issuer, name: federation-ca}

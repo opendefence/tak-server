@@ -3,14 +3,23 @@
 import hashlib
 import os
 import re
+import shutil
 import ssl
+import subprocess
 import tempfile
+from collections.abc import Mapping
 from pathlib import Path
-
-from tls_identity import run
 
 # This store contains public certificates only, like the JRE's cacerts.
 STORE_PASSWORD = "changeit"  # pragma: allowlist secret
+
+
+def run(
+    command: list[str], *, env: Mapping[str, str] | None = None, cwd: Path | None = None
+) -> bytes:
+    """Do not emit private material or command arguments containing credentials."""
+    result = subprocess.run(command, check=True, capture_output=True, env=env, cwd=cwd)
+    return result.stdout
 
 
 def initialize(base_store: Path, destination: Path, bundles: list[Path]) -> None:
@@ -72,21 +81,40 @@ def initialize(base_store: Path, destination: Path, bundles: list[Path]) -> None
         os.replace(store, destination)
 
 
-def configure(root: Path, ca_directory: Path = Path("/ca_public")) -> None:
+def configure(
+    root: Path,
+    ca_directory: Path = Path("/ca_public"),
+    *,
+    runtime: Path | None = None,
+) -> None:
     """Configure each TAK JVM's private outbound store on every service start."""
+    for variable in ("JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS"):
+        if "-Djavax.net.ssl.trustStore=" in os.environ.get(variable, ""):
+            return
     bundles = [
         path
         for path in (
             ca_directory / "ca_chain.pem",
-            ca_directory / "miniwerk_ca.pem",
+            ca_directory / "root_ca.pem",
+            ca_directory / "intermediate_ca.pem",
             root / "data/certs/files/ca.pem",
         )
         if path.exists()
     ]
     if not bundles:
         return
-    base_store = Path(os.environ["JAVA_HOME"]) / "lib/security/cacerts"
-    destination = root / "java-cacerts.p12"
+    java_home = os.environ.get("JAVA_HOME")
+    if java_home:
+        java_root = Path(java_home)
+    else:
+        java = shutil.which("java")
+        if java is None:
+            raise RuntimeError("Java is required to prepare outbound CA trust")
+        java_root = Path(java).resolve().parents[1]
+    base_store = java_root / "lib/security/cacerts"
+    directory = runtime if runtime is not None else root
+    directory.mkdir(parents=True, exist_ok=True)
+    destination = directory / "java-cacerts.p12"
     initialize(base_store, destination, bundles)
     options = os.environ.get("JAVA_TOOL_OPTIONS", "")
     os.environ["JAVA_TOOL_OPTIONS"] = (

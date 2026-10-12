@@ -1,0 +1,145 @@
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: tak-server
+  version: 5.8.92-candidate
+  description: TAK Server Kubernetes candidate, standalone or integrated
+constants:
+  - name: TAK_IMAGE
+    value: "###ZARF_PKG_TMPL_TAK_IMAGE###"
+    pattern: "^(.+@sha256:[a-f0-9]{64}|localhost/tak-server:local)$"
+variables:
+  - name: TAK_SERVER_ADDRESS
+    description: DNS name on the supplied HTTPS certificate
+    prompt: true
+    pattern: "^[A-Za-z0-9][A-Za-z0-9.-]*$"
+  - name: TAK_SERVICE_TYPE
+    default: LoadBalancer
+    pattern: "^(LoadBalancer|ClusterIP)$"
+  - name: LDAP_UPDATE_INTERVAL
+    description: LDAP refresh interval in seconds when LDAP authentication is configured
+    default: "60"
+    pattern: "^[1-9][0-9]*$"
+  - name: TAK_IGNITE_POOL_SIZE
+    default: "2"
+    pattern: "^[0-9]+$"
+  - name: TAK_IGNITE_CACHE_INITIAL_BYTES
+    default: "16777216"
+    pattern: "^[0-9]+$"
+  - name: TAK_IGNITE_CACHE_MAX_BYTES
+    default: "268435456"
+    pattern: "^[0-9]+$"
+  - name: CONFIG_MAX_HEAP
+    default: "128"
+    pattern: "^[0-9]+$"
+  - name: MESSAGING_MAX_HEAP
+    default: "512"
+    pattern: "^[0-9]+$"
+  - name: API_MAX_HEAP
+    default: "512"
+    pattern: "^[0-9]+$"
+  - name: JAVA_TOOL_OPTIONS
+    default: "-XX:ActiveProcessorCount=2"
+    pattern: "^[A-Za-z0-9_./:=,+ -]+$"
+components:
+  - name: standalone-schema
+    required: true
+    only: {flavor: standalone}
+    images:
+      - "###ZARF_PKG_TMPL_TAK_IMAGE###"
+    manifests:
+      - name: tak-schema
+        namespace: tak-server
+        kustomizations:
+          - k8s/zarf/schema
+    healthChecks:
+      - {apiVersion: batch/v1, kind: Job, name: tak-schema-5-8-92, namespace: tak-server}
+    actions:
+      onDeploy:
+        after:
+          - description: TAK schema migration to complete
+            maxTotalSeconds: 900
+            wait:
+              cluster: {kind: job, name: tak-schema-5-8-92, namespace: tak-server, condition: complete}
+  - name: standalone-grants
+    required: true
+    only: {flavor: standalone}
+    images:
+      - "###ZARF_PKG_TMPL_TAK_IMAGE###"
+    manifests:
+      - name: tak-grants
+        namespace: tak-server
+        kustomizations:
+          - k8s/zarf/grants
+    healthChecks:
+      - {apiVersion: batch/v1, kind: Job, name: tak-grants-5-8-92, namespace: tak-server}
+    actions:
+      onDeploy:
+        after:
+          - description: TAK runtime grants to complete
+            maxTotalSeconds: 180
+            wait:
+              cluster: {kind: job, name: tak-grants-5-8-92, namespace: tak-server, condition: complete}
+  - name: standalone-server
+    required: true
+    only: {flavor: standalone}
+    images:
+      - "###ZARF_PKG_TMPL_TAK_IMAGE###"
+    manifests:
+      - name: tak-server
+        namespace: tak-server
+        kustomizations:
+          - k8s/zarf/standalone
+    healthChecks:
+      - {apiVersion: apps/v1, kind: StatefulSet, name: tak-server, namespace: tak-server}
+  - name: integrated-schema
+    required: true
+    only: {flavor: integrated}
+    images:
+      - "###ZARF_PKG_TMPL_TAK_IMAGE###"
+    manifests:
+      - name: tak-schema
+        namespace: integration-tak
+        kustomizations:
+          - k8s/zarf/integrated-schema
+    healthChecks:
+      - {apiVersion: batch/v1, kind: Job, name: tak-schema-5-8-92, namespace: integration-tak}
+    actions:
+      onDeploy:
+        after:
+          - description: TAK schema migration to complete
+            maxTotalSeconds: 900
+            wait:
+              cluster: {kind: job, name: tak-schema-5-8-92, namespace: integration-tak, condition: complete}
+  - name: integrated-grants
+    required: true
+    only: {flavor: integrated}
+    images:
+      - "###ZARF_PKG_TMPL_TAK_IMAGE###"
+    manifests:
+      - name: tak-grants
+        namespace: integration-tak
+        kustomizations:
+          - k8s/zarf/integrated-grants
+    healthChecks:
+      - {apiVersion: batch/v1, kind: Job, name: tak-grants-5-8-92, namespace: integration-tak}
+    actions:
+      onDeploy:
+        after:
+          - description: TAK runtime grants to complete
+            maxTotalSeconds: 180
+            wait:
+              cluster: {kind: job, name: tak-grants-5-8-92, namespace: integration-tak, condition: complete}
+  - name: integrated-server
+    description: Integration supplies tak-integration-admin/tls.crt and JNI admin registration for strict HTTPS access
+    required: true
+    only: {flavor: integrated}
+    images:
+      - "###ZARF_PKG_TMPL_TAK_IMAGE###"
+    manifests:
+      - name: tak-server
+        namespace: integration-tak
+        kustomizations:
+          - k8s/zarf/integrated
+    healthChecks:
+      - {apiVersion: apps/v1, kind: StatefulSet, name: tak-server, namespace: integration-tak}

@@ -1,0 +1,135 @@
+{
+  "api_errors": [
+    {
+      "exception": "org.apache.ignite.IgniteClientDisconnectedException",
+      "message": "Client node disconnected: null",
+      "selected_stack_frames": [
+        {
+          "className": "org.apache.ignite.internal.processors.service.GridServiceProxy",
+          "fileName": "GridServiceProxy.java",
+          "lineNumber": 189,
+          "methodName": "invokeMethod"
+        },
+        {
+          "className": "com.bbn.useraccountmanagement.FileUserAccountManagementApi",
+          "fileName": "FileUserAccountManagementApi.java",
+          "lineNumber": 157,
+          "methodName": "getAllUsers"
+        }
+      ],
+      "timestamp_utc": "2026-10-10T15:40:01.735000+00:00"
+    },
+    {
+      "exception": "org.apache.ignite.IgniteClientDisconnectedException",
+      "message": "Client node disconnected: null",
+      "selected_stack_frames": [
+        {
+          "className": "org.apache.ignite.internal.processors.service.GridServiceProxy",
+          "fileName": "GridServiceProxy.java",
+          "lineNumber": 189,
+          "methodName": "invokeMethod"
+        },
+        {
+          "className": "com.bbn.useraccountmanagement.FileUserAccountManagementApi",
+          "fileName": "FileUserAccountManagementApi.java",
+          "lineNumber": 157,
+          "methodName": "getAllUsers"
+        }
+      ],
+      "timestamp_utc": "2026-10-10T15:40:32.006000+00:00"
+    }
+  ],
+  "environment": "../ENVIRONMENT.md",
+  "evidence_level": "Live replacement and one manual recovery; root cause unresolved",
+  "messaging_before": {
+    "created_at": "2026-10-10T15:35:03Z",
+    "ip": "10.244.0.18",
+    "name": "tak-messaging-779db64cb6-dv2xz",
+    "ready": [
+      {
+        "lastTransitionTime": "2026-10-10T15:35:21Z",
+        "status": "True"
+      }
+    ]
+  },
+  "messaging_replacement": {
+    "created_at": "2026-10-10T15:39:50Z",
+    "ip": "10.244.0.22",
+    "name": "tak-messaging-779db64cb6-56gnp",
+    "ready": [
+      {
+        "lastTransitionTime": "2026-10-10T15:39:50Z",
+        "status": "False"
+      }
+    ]
+  },
+  "observed_on": "2026-10-10",
+  "original_findings_commit": "8ec0351",
+  "recovery": {
+    "cot_exchange": "Bidirectional authenticated exchange passed in T1 terminal observations; post-recovery test stdout was not saved separately",
+    "elapsed_seconds": 137,
+    "pods": [
+      {
+        "created_at": "2026-10-10T15:41:52Z",
+        "ip": "10.244.0.24",
+        "name": "tak-api-56bbdd77c8-ch8q9",
+        "ready": [
+          {
+            "lastTransitionTime": "2026-10-10T15:42:10Z",
+            "status": "True"
+          }
+        ]
+      },
+      {
+        "created_at": "2026-10-10T15:41:14Z",
+        "ip": "10.244.0.23",
+        "name": "tak-config-66ccb8f69d-4rrs6",
+        "ready": [
+          {
+            "lastTransitionTime": "2026-10-10T15:41:22Z",
+            "status": "True"
+          }
+        ]
+      },
+      {
+        "created_at": "2026-10-10T15:39:50Z",
+        "ip": "10.244.0.22",
+        "name": "tak-messaging-779db64cb6-56gnp",
+        "ready": [
+          {
+            "lastTransitionTime": "2026-10-10T15:41:27Z",
+            "status": "True"
+          }
+        ]
+      }
+    ],
+    "started_at": "2026-10-10T15:40:44Z",
+    "test_user_count_after": 3,
+    "traffic_verified_at": "2026-10-10T15:43:01Z"
+  },
+  "redaction": "Only Pod identity/readiness, selected exception fields and stack frames, timings, and result summaries are included. Pod specs, environment variables, full logs, and identities are omitted.",
+  "remote_read_observation": {
+    "after_recovery_status": 200,
+    "after_replacement_status": 500,
+    "method": "GET",
+    "path": "/Marti/api/user-management/api/list-users",
+    "source": "T1 terminal observations and committed findings; response files contain bodies only"
+  },
+  "source_artifacts": [
+    "outputs/t1/messaging-before.json",
+    "outputs/t1/messaging-after.json",
+    "outputs/t1/recovery-stalled-pods.txt",
+    "outputs/t1/api-after-replacement.log",
+    "outputs/t1/recovery-started.txt",
+    "outputs/t1/recovery-verified.txt",
+    "outputs/t1/recovered-pods.json",
+    "outputs/t1/recovered-list-users.json"
+  ],
+  "source_checksums": "../SOURCE-SHA256SUMS",
+  "stalled_pods_snapshot": [
+    "NAME                             READY   STATUS    RESTARTS   AGE     IP            NODE                          NOMINATED NODE   READINESS GATES",
+    "tak-api-c489ddfcd-hpjj2          1/1     Running   0          5m40s   10.244.0.19   tak-server-t0-control-plane   <none>           <none>",
+    "tak-config-848786d4b5-fvk26      1/1     Running   0          5m41s   10.244.0.17   tak-server-t0-control-plane   <none>           <none>",
+    "tak-messaging-779db64cb6-56gnp   0/1     Running   0          54s     10.244.0.22   tak-server-t0-control-plane   <none>           <none>"
+  ]
+}

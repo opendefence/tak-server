@@ -117,6 +117,15 @@ def ensure(root: etree._Element, template: etree._Element, path: str) -> etree._
 def merge(saved: etree._Element, template: etree._Element) -> etree._Element:
     """Preserve admin settings and apply an explicit deployment ownership map."""
     result = deepcopy(saved)
+    # The vendor's new default is true; retain an administrator's explicit choice.
+    network = ensure(result, template, "network")
+    if network.get("MissionStrictUidMissionMembership") is None:
+        network.set(
+            "MissionStrictUidMissionMembership",
+            require(template, "network").get(
+                "MissionStrictUidMissionMembership", "false"
+            ),
+        )
     for path, attributes in MANAGED.items():
         source = one(template, path)
         if source is None:
@@ -143,7 +152,7 @@ def merge(saved: etree._Element, template: etree._Element) -> etree._Element:
         + select(result, "network/datafeed")
         + select(result, "network/connector")
     ):
-        port = node.get("port")
+        port = int(node.get("port", "0"))
         protocol = node.get("protocol", "tls")
         transport = "udp" if protocol in ("udp", "mcast", "quic") else "tcp"
         endpoint = (transport, node.get("iface", ""), port)

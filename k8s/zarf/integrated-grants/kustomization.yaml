@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: integration-tak
+resources:
+  - ../../grants
+patches:
+  - target: {kind: Job, name: tak-grants-5-8-92}
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: "###ZARF_CONST_TAK_IMAGE###"

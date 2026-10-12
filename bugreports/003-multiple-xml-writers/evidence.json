@@ -1,0 +1,37 @@
+{
+  "classification": "Deployment-specific shared-file risk; not an established upstream TAK defect",
+  "counter_evidence": "All three test identities survived ordinary T1 replacement/restarts. No overlap or corruption test was performed.",
+  "environment": "../ENVIRONMENT.md",
+  "evidence_level": "Paraphrased binary inspection; simultaneous-write loss not reproduced",
+  "historical_layout": {
+    "before_commit": "d7682ca",
+    "file": "scripts/start-tak.sh",
+    "finding": "Each role selected CoreConfig_${1}.xml. The later commit linked all roles to CoreConfig_config.xml. The old template still shared the file-auth path.",
+    "inspected_parent": "a36e91c",
+    "limit": "The inspected parent regenerated role files at startup; it does not prove preservation of administrator changes."
+  },
+  "inspection_tool": "CFR 0.152, exact T1 binaries",
+  "observed_on": "2026-10-10",
+  "original_findings_commit": "8ec0351",
+  "paths": [
+    {
+      "method": "com.bbn.marti.remote.config.LocalConfiguration constructor / saveChanges",
+      "observation": "Defaults, QoS upgrade, and version upgrade paths can save during initialization. Save synchronization is local to the JVM; the wrapper file lock is not acquired."
+    },
+    {
+      "method": "com.bbn.marti.groups.FileAuthenticator.init",
+      "observation": "The API profile fetches authentication state from the messaging remote service and writes the configured authentication file before local initialization."
+    },
+    {
+      "method": "com.bbn.marti.groups.FileAuthenticator.saveChanges",
+      "observation": "User-management saves write the configured authentication file. In T1, API and messaging refer to the shared PVC authority."
+    }
+  ],
+  "redaction": "Inspection notes are paraphrases. Decompiled source is not included.",
+  "source_artifacts": [
+    "outputs/t1/decompiled/com/bbn/marti/remote/config/CoreConfigFacade.java",
+    "outputs/t1/decompiled/com/bbn/marti/remote/config/LocalConfiguration.java",
+    "outputs/t1/decompiled/com/bbn/marti/groups/FileAuthenticator.java"
+  ],
+  "source_checksums": "../SOURCE-SHA256SUMS"
+}

@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../standalone
+images:
+  - name: tak-server
+    newName: localhost/tak-server
+    newTag: release-92
+patches:
+  - target: {kind: StatefulSet, name: tak-server}
+    patch: |-
+      - op: add
+        path: /spec/template/spec/initContainers/0/imagePullPolicy
+        value: Never
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+      - op: add
+        path: /spec/template/spec/containers/1/imagePullPolicy
+        value: Never
+      - op: add
+        path: /spec/template/spec/containers/2/imagePullPolicy
+        value: Never
+  - target: {kind: Job, name: tak-admin-bootstrap}
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target: {kind: Service, name: tak-server}
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: ClusterIP

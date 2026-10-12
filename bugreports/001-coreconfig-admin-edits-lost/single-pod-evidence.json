@@ -1,0 +1,71 @@
+{
+  "binary_change": false,
+  "environment": "../ENVIRONMENT.md",
+  "full_rollout": {
+    "after_ip": "10.244.0.26",
+    "authenticated_cot": "Passed in both directions",
+    "before_ip": "10.244.0.25",
+    "elapsed_seconds": 41,
+    "peer_after_restart": [
+      "t1_singlepod_peer"
+    ],
+    "remote_user_list_http_status": 200,
+    "started_at": "2026-10-10T17:37:56Z",
+    "timing_after_restart": 43201,
+    "traffic_verified_at": "2026-10-10T17:38:37Z",
+    "xml_after_save": {
+      "link_target": "/opt/tak/data/CoreConfig_config.xml",
+      "peer": [
+        "t1_singlepod_peer"
+      ],
+      "sha256": "sha256:d9db7f59940d32f152150ceb29f08e06a4e012bdfcaf279926f8f4e1c37178eb",
+      "timing": [
+        "43201"
+      ]
+    }
+  },
+  "limits": [
+    "One observation per recovery path; no production time bound established.",
+    "This comparison retained shared CoreConfig and file-auth paths.",
+    "No process-level file-write trace or crash injection was captured."
+  ],
+  "messaging_container_restart": {
+    "authenticated_cot": "Passed in both directions",
+    "containers": [
+      {
+        "name": "api",
+        "ready": true,
+        "restartCount": 0
+      },
+      {
+        "name": "config",
+        "ready": true,
+        "restartCount": 0
+      },
+      {
+        "name": "messaging",
+        "ready": true,
+        "restartCount": 1
+      }
+    ],
+    "elapsed_seconds": 33,
+    "ip": "10.244.0.26",
+    "remote_user_list_http_status": 200,
+    "started_at": "2026-10-10T17:38:45Z",
+    "traffic_verified_at": "2026-10-10T17:39:18Z"
+  },
+  "observed_on": "2026-10-10",
+  "redaction": "Only test-peer names, timing values, file hashes, Pod IPs, and result summaries are included. HTTP status codes and request times came from terminal observations.",
+  "source_artifacts": [
+    "outputs/t1/singlepod/pods-before.json",
+    "outputs/t1/singlepod/pods-after.json",
+    "outputs/t1/singlepod/xml-after-save.json",
+    "outputs/t1/singlepod/restarted-peer.json",
+    "outputs/t1/singlepod/restarted-federation.json",
+    "outputs/t1/singlepod/restarted-cot.txt",
+    "outputs/t1/singlepod/messaging-restart-pods-final.json",
+    "outputs/t1/singlepod/messaging-restart-cot.txt"
+  ],
+  "source_checksums": "../SOURCE-SHA256SUMS",
+  "topology": "One Pod with config, messaging, and API containers; original shared-file mapping retained for this comparison"
+}
