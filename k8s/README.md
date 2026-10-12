@@ -403,28 +403,49 @@ Keep `/Marti` TLS client authentication intact when adding external routing.
 
 ## Logs
 
-Application logs use Elastic Common Schema (ECS) JSON on stdout and in retained files.
+Set the Docker environment variable `TAK_LOG_FORMAT` to select the application log format.
+The image defaults to `utc`. The same format applies to stdout and retained files.
 This applies to config, messaging, API, retention, and plugin manager roles.
-Each event includes a timestamp, log level, logger name, and `service.name`.
-The default service name is `tak-server-ROLE`, for example `tak-server-api`.
+
+| Value | Format |
+| --- | --- |
+| `utc` | Text with ISO timestamps in UTC, ending in `Z`. This is the default. |
+| `local` | Text with ISO timestamps in the JVM time zone, including its UTC offset. |
+| `ecs` | Elastic Common Schema JSON with UTC timestamps. |
+
+For example, use `docker run -e TAK_LOG_FORMAT=ecs ...` to select ECS.
+For local time, set `TZ`, for example `-e TAK_LOG_FORMAT=local -e TZ=Europe/Helsinki`.
+The JVM option `-Duser.timezone` takes precedence over `TZ`.
+An unsupported format stops startup. A custom `LOGGING_CONFIG` takes precedence over this selector.
+
+Text follows the [libpvarki format](https://github.com/pvarki/python-libpvarki/blob/main/src/libpvarki/logging/common.py#L26):
+
+```text
+[2026-10-12T09:00:00.123Z][INFO] tak.server.ServerConfiguration (1) ServerConfiguration.java:main:123 | message
+```
+
+The example source line is illustrative. Text logs include file, method, and line when the bytecode supplies them.
+These locations refer to the shipped vendor build. Keep the TAK release number with bug reports.
+Caller lookup adds work to each text log event. Asynchronous appenders capture it before queuing.
+Audit context follows the message. Exceptions retain their stack traces.
+ECS keeps the bundled Spring fields and exception stack traces; it does not add caller fields.
+The default ECS `service.name` is `tak-server-ROLE`, for example `tak-server-api`.
 Set `LOGGING_STRUCTURED_ECS_SERVICE_NAME` to change it.
-Exceptions include their type, message, and stack trace in one JSON record.
-Existing audit context fields remain in the records.
 
 Startup creates an external copy of the vendor logging configuration.
-It uses the [Spring Boot ECS encoder](https://docs.spring.io/spring-boot/3.5/reference/features/logging.html#features.logging.structured).
+It uses bundled Logback text encoders or the [Spring Boot ECS encoder](https://docs.spring.io/spring-boot/3.5/reference/features/logging.html#features.logging.structured).
 It preserves file paths, rotation, filters, and audit routing.
 It does not change vendor WAR or JAR files.
 Set `LOGGING_CONFIG` to supply a custom logging configuration instead.
 Replace the server Pod after a logging configuration change.
 
 Early bootstrap messages and direct JVM or vendor console output can remain plain text.
-Existing retained records keep their old format. New application records use ECS JSON.
-The image check exercises ECS fields, message escaping, exceptions, audit context,
-and retained files with the pinned logging libraries:
+Existing retained records keep their old format. New records use the selected format.
+The image check exercises all formats, time zones, source locations, exceptions,
+audit context, and retained files with the pinned logging libraries:
 
 ```sh
-bash tests/test-ecs-logging.sh IMAGE
+bash tests/test-logging.sh IMAGE
 ```
 
 ## State and replacement

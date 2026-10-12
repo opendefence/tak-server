@@ -7,6 +7,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.Duration;
+import java.util.regex.Pattern;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.boot.logging.LoggingInitializationContext;
@@ -17,8 +20,27 @@ import org.springframework.core.env.StandardEnvironment;
 public final class LoggingProbe {
     private static final ObjectMapper JSON = new ObjectMapper();
 
-    private static void check(String lines, String role) throws Exception {
+    private static void check(String lines, String role, String format) throws Exception {
         if (lines.isBlank()) throw new AssertionError("No log records");
+        if (!format.equals("ecs")) {
+            var records = Pattern.compile("(?m)^\\[([^]]+)\\]\\[(INFO|WARN|ERROR)\\] "
+                    + "[^ ]+ \\(" + ProcessHandle.current().pid()
+                    + "\\) LoggingProbe.java:main:[1-9][0-9]* \\| (.*)$").matcher(lines);
+            int found = 0;
+            while (records.find()) {
+                String timestamp = records.group(1);
+                if (!timestamp.endsWith(format.equals("utc") ? "Z" : "-10:00")
+                        || Math.abs(Duration.between(OffsetDateTime.parse(timestamp).toInstant(),
+                                Instant.now()).toSeconds()) > 30) {
+                    throw new AssertionError("Text timestamp is wrong: " + records.group());
+                }
+                found++;
+            }
+            if (found == 0 || !lines.contains("trace.id=probe-trace")) {
+                throw new AssertionError("Text fields, caller or MDC lost: " + lines);
+            }
+            return;
+        }
         for (String line : lines.lines().toList()) {
             JsonNode event = JSON.readTree(line);
             Instant.parse(event.path("@timestamp").asText());
@@ -45,6 +67,8 @@ public final class LoggingProbe {
 
     public static void main(String[] args) throws Exception {
         String role = args[0];
+        String format = args[2];
+        System.setProperty("PID", Long.toString(ProcessHandle.current().pid()));
         System.setProperty("logging.structured.ecs.service.name", "tak-server-" + role);
         StandardEnvironment environment = new StandardEnvironment();
         environment.setActiveProfiles(role, "consolelog");
@@ -64,21 +88,25 @@ public final class LoggingProbe {
         ((LoggerContext) LoggerFactory.getILoggerFactory()).stop();
         System.setOut(original);
         String console = captured.toString(StandardCharsets.UTF_8);
-        check(console, role);
-        boolean messagePreserved = false;
-        for (String line : console.lines().toList()) {
-            messagePreserved |= JSON.readTree(line).path("message").asText()
-                    .equals("quoted \"value\"\nUnicode: å argument");
+        check(console, role, format);
+        boolean messagePreserved = console.contains("quoted \"value\"\nUnicode: å argument");
+        if (format.equals("ecs")) {
+            for (String line : console.lines().toList()) {
+                messagePreserved |= JSON.readTree(line).path("message").asText()
+                        .equals("quoted \"value\"\nUnicode: å argument");
+            }
+        } else if (!console.contains("java.lang.IllegalStateException: quoted \"error\"")) {
+            throw new AssertionError("Text exception lost: " + console);
         }
         if (!messagePreserved) {
             throw new AssertionError("Message escaping or formatting changed: " + console);
         }
         String application = role.equals("pm") ? "plugins" : role;
-        check(Files.readString(Path.of("logs/takserver-" + application + ".log")), role);
+        check(Files.readString(Path.of("logs/takserver-" + application + ".log")), role, format);
         if (role.equals("api")) {
-            check(Files.readString(Path.of("logs/takserver-api-access.log")), role);
-            check(Files.readString(Path.of("logs/takserver-esapi.log")), role);
+            check(Files.readString(Path.of("logs/takserver-api-access.log")), role, format);
+            check(Files.readString(Path.of("logs/takserver-esapi.log")), role, format);
         }
-        System.out.println("PASS: " + role + " ECS console, files, MDC, escaping and exceptions");
+        System.out.println("PASS: " + role + " " + format + " console, files, context and exceptions");
     }
 }

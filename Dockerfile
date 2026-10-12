@@ -115,4 +115,5 @@ COPY templates /opt/templates
 COPY update /opt/tak/webcontent/update
 
 FROM install AS run
+ENV TAK_LOG_FORMAT=utc
 ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]
